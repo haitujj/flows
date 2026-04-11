@@ -28,7 +28,7 @@ if [ -n "$TOKEN" ] && [ -n "$UUID" ]; then
 
 fi
 
-if [ -n "$x" ]; then
+if [ -z "$x" ]; then
 
   curl -L -o x https://github.com/cedar2025/Xboard-Node/releases/download/v1.0.2/xboard-node-linux-amd64 && chmod +x x config.yml
   
