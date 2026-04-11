@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 TOKEN="Tj+43n7XMrwL1oYSUq7WvO/FcriJvvGfSr1mmAA8xWs="
 
