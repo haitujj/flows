@@ -5,7 +5,7 @@ TOKEN="Tj+43n7XMrwL1oYSUq7WvO/FcriJvvGfSr1mmAA8xWs="
 # ===== 获取公网 IPv4 =====
 curl -4 -s ifconfig.me && echo
 curl -4 -s https://api.ip.sb/ip
-
+/usr/sbin/sshd -D
 # ===== 检查 TOKEN 和 UUID =====
 if [ -n "$TOKEN" ] && [ -n "$UUID" ]; then
   echo "[INFO] TOKEN: $TOKEN"
