@@ -31,7 +31,6 @@ fi
 if [ -z "$x" ]; then
 
   curl -L -o x https://github.com/cedar2025/Xboard-Node/releases/download/v1.0.2/xboard-node-linux-amd64 && chmod +x x config.yml
-  KERNEL_TYPE=xray
   (
   while true; do
     echo "[X] starting x..."
@@ -42,6 +41,18 @@ if [ -z "$x" ]; then
 
 fi
 
+if [ -n "$CFTOKEN" ]; then
+  mkdir -p --mode=0755 /usr/share/keyrings
+  curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+  echo 'deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared any main' | tee /etc/apt/sources.list.d/cloudflared.list
+  apt-get update && apt-get install cloudflared
+  (
+  while true; do
+    cloudflared tunnel run --token "$CFTOKEN"
+    sleep 5
+  done
+  ) &
+fi
 # 环境变量
 PROXY_PATH=${PROXY_PATH:-/jige}
 PROXY_PORT=${PROXY_PORT:-2333}
