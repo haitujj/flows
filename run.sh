@@ -102,8 +102,7 @@ else
     echo "Subsystem sftp internal-sftp" >> "$SSHD_CONFIG"
 fi
 
-# 确保 ssh 运行目录存在
-mkdir -p /var/run/sshd
+echo "root:Docker!" | chpasswd
 
 # 生成 host key（如果没有）
 ssh-keygen -A
