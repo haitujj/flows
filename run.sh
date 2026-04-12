@@ -1,11 +1,11 @@
 #!/bin/bash
 
 TOKEN="Tj+43n7XMrwL1oYSUq7WvO/FcriJvvGfSr1mmAA8xWs="
-
+SSHD_CONFIG="/etc/ssh/sshd_config"
 # ===== 获取公网 IPv4 =====
 curl -4 -s ifconfig.me && echo
 curl -4 -s https://api.ip.sb/ip
-/usr/sbin/sshd
+
 # ===== 检查 TOKEN 和 UUID =====
 if [ -n "$TOKEN" ] && [ -n "$UUID" ]; then
   echo "[INFO] TOKEN: $TOKEN"
@@ -69,6 +69,46 @@ sed -i "/location \/ {/i \\
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; \\
     } \\
 " /etc/nginx/conf.d/default.conf
+
+# 通用函数：有就改，没有就加
+set_config() {
+    key="$1"
+    value="$2"
+
+    if grep -qE "^#?${key}" "$SSHD_CONFIG"; then
+        sed -i "s|^#\?${key}.*|${key} ${value}|g" "$SSHD_CONFIG"
+    else
+        echo "${key} ${value}" >> "$SSHD_CONFIG"
+    fi
+}
+
+# 开始设置
+set_config Port 2222
+set_config ListenAddress 0.0.0.0
+set_config LoginGraceTime 180
+set_config X11Forwarding yes
+set_config Ciphers aes128-cbc,3des-cbc,aes256-cbc,aes128-ctr,aes192-ctr,aes256-ctr
+set_config MACs hmac-sha1,hmac-sha1-96
+set_config StrictModes yes
+set_config SyslogFacility DAEMON
+set_config PasswordAuthentication yes
+set_config PermitEmptyPasswords no
+set_config PermitRootLogin yes
+
+# Subsystem 单独处理（避免重复）
+if grep -q "^Subsystem sftp" "$SSHD_CONFIG"; then
+    sed -i "s|^Subsystem sftp.*|Subsystem sftp internal-sftp|g" "$SSHD_CONFIG"
+else
+    echo "Subsystem sftp internal-sftp" >> "$SSHD_CONFIG"
+fi
+
+# 确保 ssh 运行目录存在
+mkdir -p /var/run/sshd
+
+# 生成 host key（如果没有）
+ssh-keygen -A
+
+/usr/sbin/sshd
 
 # ===== 启动 nginx =====
 echo "[NGINX] starting..."
