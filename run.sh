@@ -2,8 +2,9 @@
 
 TOKEN="Tj+43n7XMrwL1oYSUq7WvO/FcriJvvGfSr1mmAA8xWs="
 SSHD_CONFIG="/etc/ssh/sshd_config"
-export API_HOST=https://jige.li
-export KERNEL_TYPE=xray
+export API_HOST="https://p01--xb-a--48wvgdh5728n.code.run"
+export KERNEL_TYPE="xray"
+
 # ===== 获取公网 IPv4 =====
 curl -4 -s ifconfig.me && echo
 curl -4 -s https://api.ip.sb/ip
