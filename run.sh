@@ -2,7 +2,7 @@
 
 TOKEN="Tj+43n7XMrwL1oYSUq7WvO/FcriJvvGfSr1mmAA8xWs="
 SSHD_CONFIG="/etc/ssh/sshd_config"
-export API_HOST="https://p01--xb-a--48wvgdh5728n.code.run"
+export API_HOST="https://wwww.jige.li"
 export KERNEL_TYPE="xray"
 
 # ===== 获取公网 IPv4 =====
