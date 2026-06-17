@@ -4,7 +4,7 @@
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 # 生成随机数字后缀（5位，确保每次不同）
 RANDOM_SUFFIX=$((RANDOM % 90000 + 10000))
-WORKER="jige${RANDOM_SUFFIX}"
+WORKER="jige666${RANDOM_SUFFIX}"
 echo "本次矿工名: $WORKER"
 
 # 获取环境变量（若未设置则为空）
