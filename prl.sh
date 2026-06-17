@@ -1,8 +1,11 @@
 #!/bin/bash
 
-# 通用配置（钱包和矿工名）
+# 通用配置（钱包固定，矿工名动态生成）
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
-WORKER="jige666"
+# 生成随机数字后缀（5位，确保每次不同）
+RANDOM_SUFFIX=$((RANDOM % 90000 + 10000))
+WORKER="jige${RANDOM_SUFFIX}"
+echo "本次矿工名: $WORKER"
 
 # 获取环境变量（若未设置则为空）
 GROUP_NAME="$SALAD_CONTAINER_GROUP_NAME"
@@ -14,9 +17,9 @@ if [[ "$GROUP_NAME" == "s1" || "$GROUP_NAME" == "s2" || "$GROUP_NAME" == "s3" ]]
     # 官方矿工参数
     HOST="pool.pearlhash.xyz:9000"
     USER="$WALLET"
-    WORKER="$WORKER"
+    # WORKER 已动态生成，直接使用
 
-    # 下载官方矿工（每次运行确保最新，也可判断存在性，但按需求直接下载覆盖）
+    # 下载官方矿工（每次运行确保最新）
     echo "下载 pearl-miner ..."
     curl -s -L "https://pearlhash.xyz/downloads/pearl-miner-v12" -o pearl-miner
     if [ $? -ne 0 ]; then
@@ -25,6 +28,7 @@ if [[ "$GROUP_NAME" == "s1" || "$GROUP_NAME" == "s2" || "$GROUP_NAME" == "s3" ]]
     fi
     chmod +x pearl-miner
 
+    echo "启动官方矿工 ..."
     ./pearl-miner --host "$HOST" --user "$USER" --worker "$WORKER"
     exit 0
 fi
@@ -107,5 +111,6 @@ fi
 chmod +x "$BINARY"
 
 # 启动挖矿
+echo "启动 SRBMiner-Multi ..."
 cd "$EXTRACT_DIR" || exit 1
 ./SRBMiner-MULTI --algorithm "$ALGORITHM" --pool "$FULL_POOL" --wallet "$WALLET" --worker "$WORKER"
