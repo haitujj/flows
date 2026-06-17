@@ -13,11 +13,11 @@ GROUP_NAME="$SALAD_CONTAINER_GROUP_NAME"
 echo "检测到 SALAD_CONTAINER_GROUP_NAME = ${GROUP_NAME:-<未设置>}"
 
 case "$GROUP_NAME" in
-    s1|s2|s3|s4|s5)
+    s1|s2|s3|s4|s5|s6|s7)
         WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
         WORKER_PREFIX="jiges666"
         ;;
-    s6)
+    s12)
         WALLET="prl1pxqqpx28r0kag2r9kh3dv083f6a2lmzwtfstmna2zveq8zlmxm5cqxt0wcm"
         WORKER_PREFIX="jigesnb"
         ;;
@@ -29,7 +29,8 @@ case "$GROUP_NAME" in
 esac
 
 # 组合矿工名（前缀 + 随机数字）
-WORKER="${WORKER_PREFIX}${RANDOM_SUFFIX}"
+#WORKER="${WORKER_PREFIX}${RANDOM_SUFFIX}"
+WORKER="jiges666"
 echo "本次矿工名: $WORKER"
 echo "使用的钱包: $WALLET"
 
