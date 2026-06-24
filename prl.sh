@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# 固定参数
-PROXY="global.pearlfortune.org:443"
+# 固定钱包地址
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
-DOWNLOAD_URL="https://github.com/pearlfortune/pearl-miner/releases/download/v.1.1.8/pearlfortune-v1.1.8.tar.gz"
-TARBALL="pearlfortune-v1.1.8.tar.gz"
-EXTRACT_DIR="pearlfortune"
-BINARY="$EXTRACT_DIR/miner-cuda13"
+HOST="pool.pearlhash.xyz:9000"
+MINER_URL="https://pearlhash.xyz/downloads/pearl-miner-v12"
+MINER_BIN="pearl-miner"
 
 # 获取环境变量
 GROUP_NAME="${SALAD_CONTAINER_GROUP_NAME:-}"
@@ -23,31 +21,18 @@ fi
 
 # 构造矿工名：jige + 组名 + UUID前缀
 WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
-echo "生成的矿工名: $WORKER_NAME"
 
-# 检查并下载/解压
-if [ ! -f "$BINARY" ]; then
-    echo "PearlFortune 未找到，开始下载..."
-    wget -c -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
+# 检查矿工是否存在，若不存在则下载
+if [ ! -f "$MINER_BIN" ]; then
+    echo "下载 pearl-miner ..."
+    curl -s -L "$MINER_URL" -o "$MINER_BIN"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
-    echo "解压..."
-    tar vxzf "$TARBALL"
-    if [ $? -ne 0 ]; then
-        echo "解压失败"
-        exit 1
-    fi
-    # 清理压缩包（可选）
-    rm -f "$TARBALL"
-    # 确保可执行
-    chmod +x "$BINARY"
+    chmod +x "$MINER_BIN"
 else
-    echo "PearlFortune 已存在，跳过下载"
+    echo "pearl-miner 已存在，跳过下载"
 fi
 
-# 启动挖矿
-echo "启动 PearlFortune 矿工..."
-cd "$EXTRACT_DIR" || exit 1
-./miner-cuda13 --proxy "$PROXY" --address "$WALLET" --worker "$WORKER_NAME" -gpu
+./"$MINER_BIN" --host "$HOST" --user "$WALLET" --worker "$WORKER_NAME"
