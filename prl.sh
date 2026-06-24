@@ -22,7 +22,7 @@ else
 fi
 
 # 构造矿工名：jige + 组名 + UUID前缀
-WORKER_NAME="jige${GROUP_NAME}${UUID_PREFIX}"
+WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
 echo "生成的矿工名: $WORKER_NAME"
 
 # 检查并下载/解压
