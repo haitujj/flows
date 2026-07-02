@@ -6,7 +6,7 @@ WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 DOWNLOAD_URL="https://github.com/pearlfortune/pearl-miner/releases/download/v1.2.1/pearlfortune-v1.2.1.tar.gz"
 TARBALL="pearlfortune-v1.2.1.tar.gz"
 EXTRACT_DIR="pearlfortune"
-BINARY="$EXTRACT_DIR/miner-cuda13"
+BINARY="$EXTRACT_DIR/miner-cuda12"
 
 # 获取环境变量
 GROUP_NAME="${SALAD_CONTAINER_GROUP_NAME:-}"
@@ -50,4 +50,4 @@ fi
 # 启动挖矿
 echo "启动 PearlFortune 矿工..."
 cd "$EXTRACT_DIR" || exit 1
-./miner-cuda13 --proxy "$PROXY" --address "$WALLET" --worker "$WORKER_NAME" -gpu
+./miner-cuda12 --proxy "$PROXY" --address "$WALLET" --worker "$WORKER_NAME" -gpu
