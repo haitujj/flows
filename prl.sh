@@ -3,8 +3,8 @@
 # 固定参数
 PROXY="global.pearlfortune.org:443"
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
-DOWNLOAD_URL="https://github.com/pearlfortune/pearl-miner/releases/download/v.1.1.8/pearlfortune-v1.1.8.tar.gz"
-TARBALL="pearlfortune-v1.1.8.tar.gz"
+DOWNLOAD_URL="https://github.com/pearlfortune/pearl-miner/releases/download/v1.2.1/pearlfortune-v1.2.1.tar.gz"
+TARBALL="pearlfortune-v1.2.1.tar.gz"
 EXTRACT_DIR="pearlfortune"
 BINARY="$EXTRACT_DIR/miner-cuda13"
 
