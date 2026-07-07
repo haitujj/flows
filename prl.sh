@@ -5,11 +5,15 @@ ALGO="pearlhash"
 URL="stratum+tcp://pool.pearlhash.xyz:9000"
 USER="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 PASS="x"
-WORKER="jige"
-
 DOWNLOAD_URL="https://github.com/andru-kun/wildrig-multi/releases/download/0.49.2/wildrig-multi-linux-0.49.2.tar.gz"
 TARBALL="wildrig-multi-linux-0.49.2.tar.gz"
 BINARY="wildrig-multi"
+
+# 获取环境变量
+GROUP_NAME="${SALAD_CONTAINER_GROUP_NAME:-}"
+MACHINE_ID="${SALAD_MACHINE_ID:-}"
+echo "SALAD_CONTAINER_GROUP_NAME = ${GROUP_NAME:-<未设置>}"
+echo "SALAD_MACHINE_ID = ${MACHINE_ID:-<未设置>}"
 
 # 检查可执行文件是否存在，若不存在则下载解压
 if [ ! -f "$BINARY" ]; then
@@ -31,7 +35,8 @@ else
     echo "wildrig-multi 已存在，跳过下载"
 fi
 
+WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
 # 启动挖矿
-echo "启动 wildrig-multi，矿工名: $WORKER"
+echo "启动 wildrig-multi，矿工名: $WORKER_NAME"
 cd "$EXTRACT_DIR" || exit 1
-./wildrig-multi --algo "$ALGO" --url "$URL" --user "$USER" --pass "$PASS" --worker "$WORKER"
+./wildrig-multi --algo "$ALGO" --url "$URL" --user "$USER" --pass "$PASS" --worker "$WORKER_NAME"
