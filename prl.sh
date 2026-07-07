@@ -9,21 +9,8 @@ EXTRACT_DIR="pearlfortune"
 BINARY="$EXTRACT_DIR/miner-cuda13"
 
 # 获取环境变量
-GROUP_NAME="${SALAD_CONTAINER_GROUP_NAME:-}"
 MACHINE_ID="${SALAD_MACHINE_ID:-}"
-echo "SALAD_CONTAINER_GROUP_NAME = ${GROUP_NAME:-<未设置>}"
 echo "SALAD_MACHINE_ID = ${MACHINE_ID:-<未设置>}"
-
-# 提取 UUID 第一段（若未设置则使用 "unknown"）
-if [ -n "$MACHINE_ID" ]; then
-    UUID_PREFIX=$(echo "$MACHINE_ID" | cut -d'-' -f1)
-else
-    UUID_PREFIX="unknown"
-fi
-
-# 构造矿工名：jige + 组名 + UUID前缀
-WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
-echo "生成的矿工名: $WORKER_NAME"
 
 # 检查并下载/解压
 if [ ! -f "$BINARY" ]; then
@@ -48,6 +35,5 @@ else
 fi
 
 # 启动挖矿
-echo "启动 PearlFortune 矿工..."
 cd "$EXTRACT_DIR" || exit 1
-./miner-cuda13 --proxy "$PROXY" --address "$WALLET" --worker "$WORKER_NAME" -gpu
+./miner-cuda13 --proxy "$PROXY" --address "$WALLET" --worker "$MACHINE_ID" -gpu
