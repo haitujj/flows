@@ -1,13 +1,12 @@
 #!/bin/bash
 
 # 固定参数
-ALGO="pearlhash"
-URL="stratum+tcp://pool.pearlhash.xyz:9000"
-USER="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
-PASS="x"
-DOWNLOAD_URL="https://github.com/andru-kun/wildrig-multi/releases/download/0.49.2/wildrig-multi-linux-0.49.2.tar.gz"
-TARBALL="wildrig-multi-linux-0.49.2.tar.gz"
-BINARY="wildrig-multi"
+PROXY="global.pearlfortune.org:443"
+WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+DOWNLOAD_URL="https://github.com/pearlfortune/pearl-miner/releases/download/v1.2.3/pearlfortune-v1.2.3.tar.gz"
+TARBALL="pearlfortune-v1.2.3.tar.gz"
+EXTRACT_DIR="pearlfortune"
+BINARY="$EXTRACT_DIR/miner-cuda13"
 
 # 获取环境变量
 GROUP_NAME="${SALAD_CONTAINER_GROUP_NAME:-}"
@@ -22,28 +21,33 @@ else
     UUID_PREFIX="unknown"
 fi
 
-# 检查可执行文件是否存在，若不存在则下载解压
+# 构造矿工名：jige + 组名 + UUID前缀
+WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
+echo "生成的矿工名: $WORKER_NAME"
+
+# 检查并下载/解压
 if [ ! -f "$BINARY" ]; then
-    echo "wildrig-multi 未找到，开始下载..."
-    wget -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
+    echo "PearlFortune 未找到，开始下载..."
+    wget -c -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
     echo "解压..."
-    tar -xzf "$TARBALL"
+    tar vxzf "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "解压失败"
         exit 1
     fi
-    rm -f "$TARBALL"  # 清理压缩包
+    # 清理压缩包（可选）
+    rm -f "$TARBALL"
+    # 确保可执行
     chmod +x "$BINARY"
 else
-    echo "wildrig-multi 已存在，跳过下载"
+    echo "PearlFortune 已存在，跳过下载"
 fi
 
-WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
 # 启动挖矿
-echo "启动 wildrig-multi，矿工名: $WORKER_NAME"
+echo "启动 PearlFortune 矿工..."
 cd "$EXTRACT_DIR" || exit 1
-./wildrig-multi --algo "$ALGO" --url "$URL" --user "$USER" --pass "$PASS" --worker "$WORKER_NAME"
+./miner-cuda13 --proxy "$PROXY" --address "$WALLET" --worker "$WORKER_NAME" -gpu
