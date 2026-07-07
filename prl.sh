@@ -15,6 +15,13 @@ MACHINE_ID="${SALAD_MACHINE_ID:-}"
 echo "SALAD_CONTAINER_GROUP_NAME = ${GROUP_NAME:-<未设置>}"
 echo "SALAD_MACHINE_ID = ${MACHINE_ID:-<未设置>}"
 
+# 提取 UUID 第一段（若未设置则使用 "unknown"）
+if [ -n "$MACHINE_ID" ]; then
+    UUID_PREFIX=$(echo "$MACHINE_ID" | cut -d'-' -f1)
+else
+    UUID_PREFIX="unknown"
+fi
+
 # 检查可执行文件是否存在，若不存在则下载解压
 if [ ! -f "$BINARY" ]; then
     echo "wildrig-multi 未找到，开始下载..."
