@@ -10,7 +10,7 @@ TARBALL="wildrig-multi-linux-0.49.2.tar.gz"
 BINARY="wildrig-multi"
 
 # 获取环境变量
-MACHINE_ID="${SALAD_MACHINE_ID:-}"
+MACHINE_ID="${HOSTNAME:-}"
 echo "SALAD_MACHINE_ID = ${MACHINE_ID:-<未设置>}"
 
 # 提取 UUID 第一段（若未设置则使用 "unknown"）
