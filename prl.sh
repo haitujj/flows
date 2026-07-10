@@ -6,7 +6,7 @@ POOL="ninjaraider.com:44920"
 ALGO="btx"
 
 # 获取主机名（若未设置则使用 "unknown"）
-WORKER=$HOSTNAM
+WORKER=$HOSTNAME
 echo "矿工名将使用主机名: $WORKER"
 
 # 矿工程序下载信息
