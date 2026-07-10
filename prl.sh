@@ -3,7 +3,7 @@
 # 固定参数
 PAYOUT="btx1z3p8ahqamkurhgt3l68nwv4k8kg84agpzy5604a7fke35n953dd2qrffzhw"
 POOL="global.btxpool.org:23333"
-WORKER="$(HOSTNAME)"   # 使用主机名作为矿工名
+WORKER="$HOSTNAME"   # 使用主机名作为矿工名
 
 # 下载信息
 DOWNLOAD_URL="https://github.com/pearlfortune/btx-miner/releases/download/v2.7.0/btx-v2.7.0.tar.gz"
