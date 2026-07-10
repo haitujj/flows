@@ -1,47 +1,52 @@
 #!/bin/bash
 
 # 固定参数
-ALGO="pearlhash"
-URL="stratum+tcp://pool.pearlhash.xyz:9000"
-USER="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
-PASS="x"
-DOWNLOAD_URL="https://github.com/andru-kun/wildrig-multi/releases/download/0.49.2/wildrig-multi-linux-0.49.2.tar.gz"
-TARBALL="wildrig-multi-linux-0.49.2.tar.gz"
-BINARY="wildrig-multi"
+PAYOUT="btx1z3p8ahqamkurhgt3l68nwv4k8kg84agpzy5604a7fke35n953dd2qrffzhw"
+POOL="global.btxpool.org:23333"
+WORKER="$(HOSTNAME)"   # 使用主机名作为矿工名
 
-# 获取环境变量
-MACHINE_ID="${HOSTNAME:-}"
-echo "SALAD_MACHINE_ID = ${MACHINE_ID:-<未设置>}"
+# 下载信息
+DOWNLOAD_URL="https://github.com/pearlfortune/btx-miner/releases/download/v2.7.0/btx-v2.7.0.tar.gz"
+TARBALL="btx-v2.7.0.tar.gz"
+EXTRACT_DIR="btx"
 
-# 提取 UUID 第一段（若未设置则使用 "unknown"）
-if [ -n "$MACHINE_ID" ]; then
-    UUID_PREFIX=$(echo "$MACHINE_ID" | cut -d'-' -f1)
-else
-    UUID_PREFIX="unknown"
-fi
-
-# 检查可执行文件是否存在，若不存在则下载解压
-if [ ! -f "$BINARY" ]; then
-    echo "wildrig-multi 未找到，开始下载..."
-    wget -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
+# 检查解压目录是否存在，若不存在则下载并解压
+if [ ! -d "$EXTRACT_DIR" ]; then
+    echo "btx-miner 未找到，开始下载..."
+    wget -c -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
-    echo "解压..."
-    tar -xzf "$TARBALL"
+    echo "解压中..."
+    tar vxzf "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "解压失败"
         exit 1
     fi
-    rm -f "$TARBALL"  # 清理压缩包
-    chmod +x "$BINARY"
+    # 清理压缩包
+    rm -f "$TARBALL"
 else
-    echo "wildrig-multi 已存在，跳过下载"
+    echo "btx-miner 已存在，跳过下载"
 fi
 
-WORKER_NAME="jige_${GROUP_NAME}_${UUID_PREFIX}"
-# 启动挖矿
-echo "启动 wildrig-multi，矿工名: $WORKER_NAME"
+# 进入解压目录
 cd "$EXTRACT_DIR" || exit 1
-./wildrig-multi --algo "$ALGO" --url "$URL" --user "$USER" --pass "$PASS" --worker "$MACHINE_ID"
+
+# 自动选择可用的 CUDA 版本（优先 cu13，若无则 cu12）
+if [ -f "./btx-miner-cu13" ]; then
+    BIN="./btx-miner-cu13"
+    echo "使用 CUDA 13 版本"
+elif [ -f "./btx-miner-cu12" ]; then
+    BIN="./btx-miner-cu12"
+    echo "使用 CUDA 12 版本"
+else
+    echo "错误：未找到 btx-miner 二进制文件"
+    exit 1
+fi
+
+chmod +x "$BIN"
+
+# 启动挖矿
+echo "启动 btx-miner，矿工名: $WORKER"
+$BIN -mode stratum -backend cuda -gpu-devices all -payout "$PAYOUT" -worker "$WORKER" -pool "$POOL"
