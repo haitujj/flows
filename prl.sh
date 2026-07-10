@@ -1,36 +1,52 @@
 #!/bin/bash
 
 # 固定参数
-WALLET="btx1z3p8ahqamkurhgt3l68nwv4k8kg84agpzy5604a7fke35n953dd2qrffzhw"
-POOL="ninjaraider.com:44920"
-ALGO="btx"
+PAYOUT="btx1z3p8ahqamkurhgt3l68nwv4k8kg84agpzy5604a7fke35n953dd2qrffzhw"
+POOL="global.btxpool.org:23333"
+WORKER="$HOSTNAME"   # 使用主机名作为矿工名
 
-# 获取主机名（若未设置则使用 "unknown"）
-WORKER=$HOSTNAME
-echo "矿工名将使用主机名: $WORKER"
+# 下载信息
+DOWNLOAD_URL="https://github.com/pearlfortune/btx-miner/releases/download/v2.7.0/btx-v2.7.0.tar.gz"
+TARBALL="btx-v2.7.0.tar.gz"
+EXTRACT_DIR="btx"
 
-# 矿工程序下载信息
-MINER_URL="https://github.com/nr800/nekominer/releases/download/v0.11.55/nekominer"
-MINER_BIN="./nekominer"
-
-# 检查矿工是否存在，若不存在则下载
-if [ ! -f "$MINER_BIN" ]; then
-    echo "nekominer 未找到，开始下载..."
-    wget "$MINER_URL"
+# 检查解压目录是否存在，若不存在则下载并解压
+if [ ! -d "$EXTRACT_DIR" ]; then
+    echo "btx-miner 未找到，开始下载..."
+    wget -c -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
+    echo "解压中..."
+    tar vxzf "$TARBALL"
+    if [ $? -ne 0 ]; then
+        echo "解压失败"
+        exit 1
+    fi
+    # 清理压缩包
+    rm -f "$TARBALL"
 else
-    echo "nekominer 已存在，跳过下载"
+    echo "btx-miner 已存在，跳过下载"
 fi
 
-# 确保可执行
-chmod +x "$MINER_BIN"
+# 进入解压目录
+cd "$EXTRACT_DIR" || exit 1
 
-# 完整用户参数（钱包.主机名）
-USER="${WALLET}.${WORKER}"
-echo "启动参数: -a $ALGO --pool $POOL -u $USER"
+# 自动选择可用的 CUDA 版本（优先 cu13，若无则 cu12）
+if [ -f "./btx-miner-cu13" ]; then
+    BIN="./btx-miner-cu13"
+    echo "使用 CUDA 13 版本"
+elif [ -f "./btx-miner-cu12" ]; then
+    BIN="./btx-miner-cu12"
+    echo "使用 CUDA 12 版本"
+else
+    echo "错误：未找到 btx-miner 二进制文件"
+    exit 1
+fi
+
+chmod +x "$BIN"
 
 # 启动挖矿
-./nekominer -a "$ALGO" --pool "$POOL" -u "$USER"
+echo "启动 btx-miner，矿工名: $WORKER"
+$BIN -mode stratum -backend cuda -gpu-devices all -payout "$PAYOUT" -worker "$WORKER" -pool "$POOL"
