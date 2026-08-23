@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # 固定参数
-ALGO="pearlhash"
-POOL="stratum+tcp://pool.pearlhash.xyz:9000"
+COIN="pearl"
+POOL="stratum+tcp://prl.kryptex.network:7048"
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 
 # 获取 WORKER：从 SALAD_MACHINE_ID 取前 8 位
@@ -13,39 +13,42 @@ else
     WORKER="jige"   # 未设置时的默认值
 fi
 echo "矿工名: $WORKER"
+USER="${WALLET}/${WORKER}"
 
 # 下载信息
-DOWNLOAD_URL="https://github.com/andru-kun/wildrig-multi/releases/download/0.50.3/wildrig-multi-linux-0.50.3.tar.gz"
-TARBALL="wildrig-multi-linux-0.50.3.tar.gz"
-BINARY="./wildrig-multi"
+DOWNLOAD_URL="https://github.com/peakminer/peakminer/releases/download/v2.11.0/peakminer-2.11.0.tar.gz"
+TARBALL="peakminer-2.11.0.tar.gz"
+EXTRACT_DIR="peakminer"
+BINARY="$EXTRACT_DIR/peakminer"
 
-# 检查主程序是否存在，若不存在则下载并解压
-if [ ! -f "$BINARY" ]; then
-    echo "wildrig-multi 未找到，开始下载..."
+# 检查解压目录是否存在，若不存在则下载并解压
+if [ ! -d "$EXTRACT_DIR" ]; then
+    echo "peakminer 未找到，开始下载..."
     wget -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
     echo "解压中..."
-    tar -xzf "$TARBALL"
+    tar xzf "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "解压失败"
         exit 1
     fi
     # 清理压缩包
     rm -f "$TARBALL"
-    # 确保可执行
-    chmod +x "$BINARY"
 else
-    echo "wildrig-multi 已存在，跳过下载"
+    echo "peakminer 已存在，跳过下载"
 fi
 
+# 确保二进制可执行
+if [ ! -f "$BINARY" ]; then
+    echo "错误：未找到 $BINARY，请检查解压是否完整"
+    exit 1
+fi
+chmod +x "$BINARY"
+
 # 启动挖矿
-echo "启动 wildrig-multi，矿工名: $WORKER"
-./wildrig-multi \
-    --algo "$ALGO" \
-    --url "$POOL" \
-    --user "$WALLET" \
-    --pass "x" \
-    --worker "$WORKER"
+echo "启动 peakminer，矿工名: $WORKER"
+cd "$EXTRACT_DIR" || exit 1
+./peakminer --coin "$COIN" -o "$POOL" -u "$USER" 2>&1 | tee -a /miner.log
