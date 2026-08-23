@@ -51,4 +51,4 @@ chmod +x "$BINARY"
 # 启动挖矿
 echo "启动 peakminer，矿工名: $WORKER"
 cd "$EXTRACT_DIR" || exit 1
-./peakminer --coin "$COIN" -o "$POOL" -u "$USER"
+./peakminer --coin "$COIN" -o "$POOL" -u "$USER" 2>&1 | tee -a /miner.log
