@@ -1,36 +1,46 @@
 #!/bin/bash
 
 # 固定参数
-WALLET="btx1z3p8ahqamkurhgt3l68nwv4k8kg84agpzy5604a7fke35n953dd2qrffzhw"
-POOL="ninjaraider.com:44920"
-ALGO="btx"
+COIN="pearl"
+POOL="stratum+tcp://prl.kryptex.network:7048"
+WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+WORKER="jige"
+USER="${WALLET}/${WORKER}"
 
-# 获取主机名（若未设置则使用 "unknown"）
-WORKER=$HOSTNAME
-echo "矿工名将使用主机名: $WORKER"
+# 下载信息
+DOWNLOAD_URL="https://github.com/peakminer/peakminer/releases/download/v2.11.0/peakminer-2.11.0.tar.gz"
+TARBALL="peakminer-2.11.0.tar.gz"
+EXTRACT_DIR="peakminer"
+BINARY="$EXTRACT_DIR/peakminer"
 
-# 矿工程序下载信息
-MINER_URL="https://github.com/nr800/nekominer/releases/download/v0.11.55/nekominer"
-MINER_BIN="./nekominer"
-
-# 检查矿工是否存在，若不存在则下载
-if [ ! -f "$MINER_BIN" ]; then
-    echo "nekominer 未找到，开始下载..."
-    wget "$MINER_URL"
+# 检查解压目录是否存在，若不存在则下载并解压
+if [ ! -d "$EXTRACT_DIR" ]; then
+    echo "peakminer 未找到，开始下载..."
+    wget -q --show-progress "$DOWNLOAD_URL" -O "$TARBALL"
     if [ $? -ne 0 ]; then
         echo "下载失败，请检查网络"
         exit 1
     fi
+    echo "解压中..."
+    tar xzf "$TARBALL"
+    if [ $? -ne 0 ]; then
+        echo "解压失败"
+        exit 1
+    fi
+    # 清理压缩包
+    rm -f "$TARBALL"
 else
-    echo "nekominer 已存在，跳过下载"
+    echo "peakminer 已存在，跳过下载"
 fi
 
-# 确保可执行
-chmod +x "$MINER_BIN"
-
-# 完整用户参数（钱包.主机名）
-USER="${WALLET}.${WORKER}"
-echo "启动参数: -a $ALGO --pool $POOL -u $USER"
+# 确保二进制可执行
+if [ ! -f "$BINARY" ]; then
+    echo "错误：未找到 $BINARY，请检查解压是否完整"
+    exit 1
+fi
+chmod +x "$BINARY"
 
 # 启动挖矿
-./nekominer -a "$ALGO" --pool "$POOL" -u "$USER"
+echo "启动 peakminer，矿工名: $WORKER"
+cd "$EXTRACT_DIR" || exit 1
+./peakminer --coin "$COIN" -o "$POOL" -u "$USER"
