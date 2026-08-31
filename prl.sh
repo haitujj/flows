@@ -1,5 +1,56 @@
 #!/bin/bash
 
+GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
+
+echo "Detected GPU count: $GPU_COUNT"
+
+if [ "$GPU_COUNT" -eq 1 ]; then
+
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1 | xargs)
+
+    echo "Detected GPU: $GPU_NAME"
+
+    case "$GPU_NAME" in
+        "NVIDIA GeForce RTX 3070 Laptop GPU"|"NVIDIA GeForce RTX 3060"|"NVIDIA GeForce RTX 2080 SUPER"|"NVIDIA GeForce RTX 2080 Ti")
+            echo "Target GPU detected: $GPU_NAME"
+            echo "Sending Salad reallocate request..."
+
+            curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+              -X POST \
+              -H 'accept: */*' \
+              -H 'accept-language: zh-CN,zh;q=0.9' \
+              -H 'content-length: 0' \
+              -b "scid=$TK" \
+              -H 'origin: https://portal.salad.com' \
+              -H 'priority: u=1, i' \
+              -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
+              -H 'sec-ch-ua-mobile: ?0' \
+              -H 'sec-ch-ua-platform: "Windows"' \
+              -H 'sec-fetch-dest: empty' \
+              -H 'sec-fetch-mode: cors' \
+              -H 'sec-fetch-site: same-site' \
+              -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+              
+
+            echo
+            echo "Reallocate request sent."
+            ;;
+
+        *)
+            echo "GPU $GPU_NAME is not a target GPU, no request."
+            ;;
+    esac
+
+elif [ "$GPU_COUNT" -gt 1 ]; then
+
+    echo "Multiple GPUs detected ($GPU_COUNT), reallocate disabled."
+
+else
+
+    echo "No NVIDIA GPU detected, no request."
+
+fi
+
 # 固定参数
 ALGO="pearlhash"
 POOL="stratum+tcp://prl.kryptex.network:7048"
