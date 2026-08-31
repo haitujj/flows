@@ -14,7 +14,6 @@ if [ "$GPU_COUNT" -eq 1 ]; then
         *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*|"NVIDIA GeForce RTX 3070")
             echo "Target GPU detected: $GPU_NAME"
             echo "Sending Salad reallocate request..."
-            exit 1
             while true; do
                 curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                   -X POST \
@@ -32,7 +31,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
                   -H 'sec-fetch-site: same-site' \
                   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
             
-                sleep 1
+                sleep 2
             done
 
             echo
@@ -113,7 +112,6 @@ LAST_HASH_LINE=""
             if [ "$NO_HASH_COUNT" -ge 40 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
-                exit 1
                 while true; do
                     curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                       -X POST \
@@ -131,7 +129,7 @@ LAST_HASH_LINE=""
                       -H 'sec-fetch-site: same-site' \
                       -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
                 
-                    sleep 1
+                    sleep 2
                 done
 
             fi
@@ -168,7 +166,7 @@ LAST_HASH_LINE=""
             if [ "$LOW_COUNT" -ge 3 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, sending reallocate request..."
-                pkill -9 fl4shminer
+
                 while true; do
                     curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                       -X POST \
@@ -186,7 +184,7 @@ LAST_HASH_LINE=""
                       -H 'sec-fetch-site: same-site' \ 
                       -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36' 
                  
-                    sleep 1 
+                    sleep 2 
                 done 
                 exit 1 
             fi 
