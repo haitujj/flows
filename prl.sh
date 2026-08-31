@@ -95,24 +95,30 @@ chmod +x "$BINARY" 2>/dev/null
 MIN_HASHRATE=88
 NO_HASH_COUNT=0
 LOW_COUNT=0
-LAST_HASH_LINE=""
+LAST_HASH_TIMESTAMP=""
 
 (
     while true; do
         sleep 1
 
-        HASH_LINE=$(grep 'hashRate:' /miner.log 2>/dev/null | tail -n 1)
+        # ==========================================
+        # 获取最近一次每张 GPU 的 hashRate
+        # 然后计算所有 GPU 总算力
+        # ==========================================
 
-        # 没有获取到 hashRate
-        if [ -z "$HASH_LINE" ]; then
+        GPU_HASHES=$(grep 'Device \[[0-9]\+\] hashRate:' /miner.log 2>/dev/null | tail -n 20)
+
+        if [ -z "$GPU_HASHES" ]; then
             NO_HASH_COUNT=$((NO_HASH_COUNT + 1))
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
 
             if [ "$NO_HASH_COUNT" -ge 40 ]; then
 
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
+
                 while true; do
+
                     curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
@@ -128,75 +134,95 @@ LAST_HASH_LINE=""
                       -H 'sec-fetch-mode: cors' \
                       -H 'sec-fetch-site: same-site' \
                       -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-                
-                    sleep 2
-                done
 
+                    sleep 2
+
+                done
             fi
 
             continue
         fi
 
-        # 获取到了 hashRate，重置无算力计数
+
+        # ==========================================
+        # 有 hashRate
+        # ==========================================
+
         NO_HASH_COUNT=0
 
-        # 防止同一条日志被重复计算
-        if [ "$HASH_LINE" = "$LAST_HASH_LINE" ]; then
+
+        # ==========================================
+        # 获取最近一组 GPU hashRate
+        #
+        # Fl4shMiner 多卡输出例如：
+        #
+        # Device [1] hashRate: 158.95 TH/s
+        # Device [2] hashRate: 51.18 TH/s
+        #
+        # 总算力 = 210.13 TH/s
+        # ==========================================
+
+        TOTAL_HASHRATE=$(echo "$GPU_HASHES" | \
+            sed -n 's/.*hashRate: \([0-9.]*\) TH\/s.*/\1/p' | \
+            awk '{sum += $1} END {printf "%.2f", sum}')
+
+
+        if [ -z "$TOTAL_HASHRATE" ] || [ "$TOTAL_HASHRATE" = "0.00" ]; then
             continue
         fi
 
-        LAST_HASH_LINE="$HASH_LINE"
 
-        # 提取 TH/s
-        HASHRATE=$(echo "$HASH_LINE" | sed -n 's/.*hashRate: \([0-9.]*\) TH\/s.*/\1/p')
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
 
-        if [ -z "$HASHRATE" ]; then
-            continue
-        fi
 
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate: ${HASHRATE} TH/s"
+        # ==========================================
+        # 判断总算力
+        # ==========================================
 
-        # 低于 88
-        if awk "BEGIN {exit !($HASHRATE < $MIN_HASHRATE)}"; then
+        if awk "BEGIN {exit !($TOTAL_HASHRATE < $MIN_HASHRATE)}"; then
 
             LOW_COUNT=$((LOW_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: ${HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
+
 
             if [ "$LOW_COUNT" -ge 3 ]; then
 
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, sending reallocate request..."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total hashrate too low 3 times, sending reallocate request..."
 
                 while true; do
-                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+
+                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
                       -H 'accept-language: zh-CN,zh;q=0.9' \
                       -H 'content-length: 0' \
                       -b "scid=$TK" \
-                      -H 'origin: https://portal.salad.com' \ 
-                      -H 'priority: u=1, i' \ 
-                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \ 
-                      -H 'sec-ch-ua-mobile: ?0' \ 
-                      -H 'sec-ch-ua-platform: "Windows"' \ 
-                      -H 'sec-fetch-dest: empty' \ 
-                      -H 'sec-fetch-mode: cors' \ 
-                      -H 'sec-fetch-site: same-site' \ 
-                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36' 
-                 
-                    sleep 2 
-                done 
-                exit 1 
-            fi 
- 
-        else 
-            # 恢复正常 
-            LOW_COUNT=0 
+                      -H 'origin: https://portal.salad.com' \
+                      -H 'priority: u=1, i' \
+                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
+                      -H 'sec-ch-ua-mobile: ?0' \
+                      -H 'sec-ch-ua-platform: "Windows"' \
+                      -H 'sec-fetch-dest: empty' \
+                      -H 'sec-fetch-mode: cors' \
+                      -H 'sec-fetch-site: same-site' \
+                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+
+                    sleep 2
+
+                done
+
+            fi
+
+        else
+
+            # 总算力恢复正常
+            LOW_COUNT=0
             exit 1
-        fi 
- 
-    done 
-) & 
+        fi
+
+    done
+) &
  
  
 # ============================== 
