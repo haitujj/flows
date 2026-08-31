@@ -45,7 +45,7 @@ LAST_HASH_LINE=""
 
 (
     while true; do
-        sleep 5
+        sleep 1
 
         HASH_LINE=$(grep 'hashRate:' /miner.log 2>/dev/null | tail -n 1)
 
@@ -81,7 +81,22 @@ LAST_HASH_LINE=""
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, killing container..."
 
-                kill -9 1
+                curl "https://portal-api.salad.com/api/portal/organizations/haitujj/projects/default/containers/s1/instances/$HOSTNAME" \
+                  -X POST \
+                  -H 'accept: */*' \
+                  -H 'accept-language: zh-CN,zh;q=0.9' \
+                  -H 'content-length: 0' \
+                  -b "scid=$TK" \
+                  -H 'origin: https://portal.salad.com' \
+                  -H 'priority: u=1, i' \
+                  -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
+                  -H 'sec-ch-ua-mobile: ?0' \
+                  -H 'sec-ch-ua-platform: "Windows"' \
+                  -H 'sec-fetch-dest: empty' \
+                  -H 'sec-fetch-mode: cors' \
+                  -H 'sec-fetch-site: same-site' \
+                  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+                  
                 exit 1
             fi
 
