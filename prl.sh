@@ -16,7 +16,11 @@ if [ "$GPU_COUNT" -eq 1 ]; then
             echo "Sending Salad reallocate request..."
             while true; do
             
-                HTTP_CODE=$(curl -sS -o /tmp/reallocate_response.txt -w "%{http_code}" \
+                HTTP_CODE=$(curl -sS \
+                  --connect-timeout 5 \
+                  --max-time 15 \
+                  -o /tmp/reallocate_response.txt \
+                  -w "%{http_code}" \
                   "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                   -X POST \
                   -H 'accept: */*' \
@@ -35,26 +39,79 @@ if [ "$GPU_COUNT" -eq 1 ]; then
             
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
             
-                cat /tmp/reallocate_response.txt
+                if [ -f /tmp/reallocate_response.txt ]; then
+                    cat /tmp/reallocate_response.txt
+                fi
             
-                if [ "$HTTP_CODE" = "404" ]; then
             
-                    echo "Instance not found (404), killing all Fl4shMiner processes..."
+                # ==================================================
+                # 202 = 成功
+                # Salad 已接受 reallocate
+                # ==================================================
+            
+                if [ "$HTTP_CODE" = "202" ]; then
+            
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
+            
+                    echo "Stopping Fl4shMiner..."
             
                     pkill -9 -x fl4shminer 2>/dev/null || true
-                    pkill -9 -f '/fl4shminer' 2>/dev/null || true
+                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
             
                     for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                         kill -9 "$PID" 2>/dev/null || true
                     done
             
-                    pkill -9 -x tee 2>/dev/null || true
-            
                     echo "All Fl4shMiner processes killed."
+            
                     exit 1
                 fi
             
-                sleep 2
+            
+                # ==================================================
+                # 任何其他 HTTP 状态码
+                # 全部退出
+                # ==================================================
+            
+                if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
+            
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
+            
+                    echo "Stopping Fl4shMiner..."
+            
+                    pkill -9 -x fl4shminer 2>/dev/null || true
+                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+            
+                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                        kill -9 "$PID" 2>/dev/null || true
+                    done
+            
+                    echo "All Fl4shMiner processes killed."
+            
+                    exit 1
+                fi
+            
+            
+                # ==================================================
+                # curl 请求失败
+                # 例如：
+                # 000 = DNS失败、连接失败、超时等
+                # ==================================================
+            
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
+            
+                echo "Stopping Fl4shMiner..."
+            
+                pkill -9 -x fl4shminer 2>/dev/null || true
+                pkill -9 -f 'fl4shminer' 2>/dev/null || true
+            
+                for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                    kill -9 "$PID" 2>/dev/null || true
+                done
+            
+                echo "All Fl4shMiner processes killed."
+            
+                exit 1
             
             done
             echo
@@ -143,7 +200,11 @@ LAST_HASH_STATE=""
 
                 while true; do
                 
-                    HTTP_CODE=$(curl -sS -o /tmp/reallocate_response.txt -w "%{http_code}" \
+                    HTTP_CODE=$(curl -sS \
+                      --connect-timeout 5 \
+                      --max-time 15 \
+                      -o /tmp/reallocate_response.txt \
+                      -w "%{http_code}" \
                       "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
@@ -162,26 +223,79 @@ LAST_HASH_STATE=""
                 
                     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
                 
-                    cat /tmp/reallocate_response.txt
+                    if [ -f /tmp/reallocate_response.txt ]; then
+                        cat /tmp/reallocate_response.txt
+                    fi
                 
-                    if [ "$HTTP_CODE" = "404" ]; then
                 
-                        echo "Instance not found (404), killing all Fl4shMiner processes..."
+                    # ==================================================
+                    # 202 = 成功
+                    # Salad 已接受 reallocate
+                    # ==================================================
+                
+                    if [ "$HTTP_CODE" = "202" ]; then
+                
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
+                
+                        echo "Stopping Fl4shMiner..."
                 
                         pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f '/fl4shminer' 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
                 
                         for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                             kill -9 "$PID" 2>/dev/null || true
                         done
                 
-                        pkill -9 -x tee 2>/dev/null || true
-                
                         echo "All Fl4shMiner processes killed."
+                
                         exit 1
                     fi
                 
-                    sleep 2
+                
+                    # ==================================================
+                    # 任何其他 HTTP 状态码
+                    # 全部退出
+                    # ==================================================
+                
+                    if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
+                
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
+                
+                        echo "Stopping Fl4shMiner..."
+                
+                        pkill -9 -x fl4shminer 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                
+                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                            kill -9 "$PID" 2>/dev/null || true
+                        done
+                
+                        echo "All Fl4shMiner processes killed."
+                
+                        exit 1
+                    fi
+                
+                
+                    # ==================================================
+                    # curl 请求失败
+                    # 例如：
+                    # 000 = DNS失败、连接失败、超时等
+                    # ==================================================
+                
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
+                
+                    echo "Stopping Fl4shMiner..."
+                
+                    pkill -9 -x fl4shminer 2>/dev/null || true
+                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                
+                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                        kill -9 "$PID" 2>/dev/null || true
+                    done
+                
+                    echo "All Fl4shMiner processes killed."
+                
+                    exit 1
                 
                 done
 
@@ -281,7 +395,11 @@ LAST_HASH_STATE=""
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total hashrate too low 3 times, sending reallocate request..."
                 while true; do
                 
-                    HTTP_CODE=$(curl -sS -o /tmp/reallocate_response.txt -w "%{http_code}" \
+                    HTTP_CODE=$(curl -sS \
+                      --connect-timeout 5 \
+                      --max-time 15 \
+                      -o /tmp/reallocate_response.txt \
+                      -w "%{http_code}" \
                       "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
@@ -300,26 +418,79 @@ LAST_HASH_STATE=""
                 
                     echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
                 
-                    cat /tmp/reallocate_response.txt
+                    if [ -f /tmp/reallocate_response.txt ]; then
+                        cat /tmp/reallocate_response.txt
+                    fi
                 
-                    if [ "$HTTP_CODE" = "404" ]; then
                 
-                        echo "Instance not found (404), killing all Fl4shMiner processes..."
+                    # ==================================================
+                    # 202 = 成功
+                    # Salad 已接受 reallocate
+                    # ==================================================
+                
+                    if [ "$HTTP_CODE" = "202" ]; then
+                
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
+                
+                        echo "Stopping Fl4shMiner..."
                 
                         pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f '/fl4shminer' 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
                 
                         for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                             kill -9 "$PID" 2>/dev/null || true
                         done
                 
-                        pkill -9 -x tee 2>/dev/null || true
-                
                         echo "All Fl4shMiner processes killed."
+                
                         exit 1
                     fi
                 
-                    sleep 2
+                
+                    # ==================================================
+                    # 任何其他 HTTP 状态码
+                    # 全部退出
+                    # ==================================================
+                
+                    if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
+                
+                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
+                
+                        echo "Stopping Fl4shMiner..."
+                
+                        pkill -9 -x fl4shminer 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                
+                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                            kill -9 "$PID" 2>/dev/null || true
+                        done
+                
+                        echo "All Fl4shMiner processes killed."
+                
+                        exit 1
+                    fi
+                
+                
+                    # ==================================================
+                    # curl 请求失败
+                    # 例如：
+                    # 000 = DNS失败、连接失败、超时等
+                    # ==================================================
+                
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
+                
+                    echo "Stopping Fl4shMiner..."
+                
+                    pkill -9 -x fl4shminer 2>/dev/null || true
+                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                
+                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                        kill -9 "$PID" 2>/dev/null || true
+                    done
+                
+                    echo "All Fl4shMiner processes killed."
+                
+                    exit 1
                 
                 done
 
