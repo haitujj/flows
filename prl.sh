@@ -81,7 +81,7 @@ LAST_HASH_LINE=""
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, killing container..."
 
-                curl "https://portal-api.salad.com/api/portal/organizations/haitujj/projects/default/containers/s1/instances/$HOSTNAME" \
+                curl "https://portal-api.salad.com/api/portal/organizations/haitujj/projects/default/containers/s1/instances/$HOSTNAME/reallocate" \
                   -X POST \
                   -H 'accept: */*' \
                   -H 'accept-language: zh-CN,zh;q=0.9' \
