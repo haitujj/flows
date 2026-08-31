@@ -32,4 +32,4 @@ chmod +x "$BINARY" 2>/dev/null
 
 # 启动矿工（输出保留，并同时写入 /miner.log）
 cd "$EXTRACT_DIR" || exit 1
-./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | grep -i "TH/s" | tee -a /miner.log
+./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
