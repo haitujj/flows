@@ -14,27 +14,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
         *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*|"NVIDIA GeForce RTX 3070")
             echo "Target GPU detected: $GPU_NAME"
             echo "Sending Salad reallocate request..."
-
-            while true; do
-                curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
-                  -X POST \
-                  -H 'accept: */*' \
-                  -H 'accept-language: zh-CN,zh;q=0.9' \
-                  -H 'content-length: 0' \
-                  -b "scid=$TK" \
-                  -H 'origin: https://portal.salad.com' \
-                  -H 'priority: u=1, i' \
-                  -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                  -H 'sec-ch-ua-mobile: ?0' \
-                  -H 'sec-ch-ua-platform: "Windows"' \
-                  -H 'sec-fetch-dest: empty' \
-                  -H 'sec-fetch-mode: cors' \
-                  -H 'sec-fetch-site: same-site' \
-                  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-            
-                sleep 1
-            done
-
+            exit 1
             echo
             echo "Reallocate request sent."
             ;;
@@ -113,26 +93,6 @@ LAST_HASH_LINE=""
             if [ "$NO_HASH_COUNT" -ge 7 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
-
-                while true; do
-                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
-                      -X POST \
-                      -H 'accept: */*' \
-                      -H 'accept-language: zh-CN,zh;q=0.9' \
-                      -H 'content-length: 0' \
-                      -b "scid=$TK" \
-                      -H 'origin: https://portal.salad.com' \
-                      -H 'priority: u=1, i' \
-                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                      -H 'sec-ch-ua-mobile: ?0' \
-                      -H 'sec-ch-ua-platform: "Windows"' \
-                      -H 'sec-fetch-dest: empty' \
-                      -H 'sec-fetch-mode: cors' \
-                      -H 'sec-fetch-site: same-site' \
-                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-                
-                    sleep 1
-                done
                 exit 1
             fi
 
@@ -168,27 +128,6 @@ LAST_HASH_LINE=""
             if [ "$LOW_COUNT" -ge 3 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, sending reallocate request..."
-
-                while true; do
-                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
-                      -X POST \
-                      -H 'accept: */*' \
-                      -H 'accept-language: zh-CN,zh;q=0.9' \
-                      -H 'content-length: 0' \
-                      -b "scid=$TK" \
-                      -H 'origin: https://portal.salad.com' \
-                      -H 'priority: u=1, i' \
-                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                      -H 'sec-ch-ua-mobile: ?0' \
-                      -H 'sec-ch-ua-platform: "Windows"' \
-                      -H 'sec-fetch-dest: empty' \
-                      -H 'sec-fetch-mode: cors' \
-                      -H 'sec-fetch-site: same-site' \
-                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-                
-                    sleep 1
-                done
-
                 exit 1
             fi
 
