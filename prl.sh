@@ -15,7 +15,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
             echo "Target GPU detected: $GPU_NAME"
             echo "Sending Salad reallocate request..."
             while true; do
-                curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+                curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                   -X POST \
                   -H 'accept: */*' \
                   -H 'accept-language: zh-CN,zh;q=0.9' \
@@ -121,7 +121,7 @@ LAST_HASH_STATE=""
                 # 这里执行你的 reallocate
                 while true; do
 
-                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
                       -H 'content-length: 0' \
@@ -228,7 +228,7 @@ LAST_HASH_STATE=""
 
                 while true; do
 
-                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+                    curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
                       -X POST \
                       -H 'accept: */*' \
                       -H 'content-length: 0' \
