@@ -66,6 +66,22 @@ fi
 chmod +x "$BINARY" 2>/dev/null
 
 
+(
+# ==============================
+# 启动矿工
+# ==============================
+
+cd "$EXTRACT_DIR" || exit 1
+
+./fl4shminer \
+    -a "$ALGO" \
+    -pool "$POOL" \
+    -w "$WALLET_WORKER" \
+    -pass x \
+    2>&1 | tee -a /miner.log
+) &
+
+
 # ==============================
 # Hashrate 监控
 # 每 5 秒检查
@@ -78,8 +94,8 @@ NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_LINE=""
 
-(
-    while true; do
+
+        while true; do
         sleep 1
 
         HASH_LINE=$(grep 'hashRate:' /miner.log 2>/dev/null | tail -n 1)
@@ -137,21 +153,3 @@ LAST_HASH_LINE=""
         fi
 
     done
-) &
-
-
-# ==============================
-# 启动矿工
-# ==============================
-
-cd "$EXTRACT_DIR" || exit 1
-
-./fl4shminer \
-    -a "$ALGO" \
-    -pool "$POOL" \
-    -w "$WALLET_WORKER" \
-    -pass x \
-    2>&1 | tee -a /miner.log
-
-
-把这些检测改为函数，每秒都在检测
