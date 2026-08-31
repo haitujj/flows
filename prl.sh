@@ -218,7 +218,6 @@ LAST_HASH_TIMESTAMP=""
 
             # 总算力恢复正常
             LOW_COUNT=0
-            exit 1
         fi
 
     done
