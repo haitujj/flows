@@ -163,7 +163,7 @@ LAST_HASH_LINE=""
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: ${HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
 
-            if [ "$LOW_COUNT" -ge 2 ]; then
+            if [ "$LOW_COUNT" -ge 3 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, sending reallocate request..."
 
@@ -192,6 +192,7 @@ LAST_HASH_LINE=""
         else 
             # 恢复正常 
             LOW_COUNT=0 
+            exit 1
         fi 
  
     done 
