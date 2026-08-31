@@ -11,7 +11,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
     echo "Detected GPU: $GPU_NAME"
 
     case "$GPU_NAME" in
-        *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*|"NVIDIA GeForce RTX 3070")
+        "RNVIDIA GeForce RTX 3070 Laptop GPU"|*"3060"*|*"2080"*|"NVIDIA GeForce RTX 3070")
             echo "Target GPU detected: $GPU_NAME"
             echo "Sending Salad reallocate request..."
             exit 1
@@ -106,7 +106,7 @@ LAST_HASH_LINE=""
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/10)"
 
-            if [ "$NO_HASH_COUNT" -ge 15 ]; then
+            if [ "$NO_HASH_COUNT" -ge 20 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
                 exit 1
