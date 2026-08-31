@@ -91,6 +91,7 @@ chmod +x "$BINARY" 2>/dev/null
 # ==============================
 
 MIN_HASHRATE=88
+NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_LINE=""
 
@@ -100,10 +101,40 @@ LAST_HASH_LINE=""
 
         HASH_LINE=$(grep 'hashRate:' /miner.log 2>/dev/null | tail -n 1)
 
-        # 没有 hashRate
+        # 没有获取到 hashRate
         if [ -z "$HASH_LINE" ]; then
+            NO_HASH_COUNT=$((NO_HASH_COUNT + 1))
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/10)"
+
+            if [ "$NO_HASH_COUNT" -ge 10 ]; then
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
+
+                curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
+                  -X POST \
+                  -H 'accept: */*' \
+                  -H 'accept-language: zh-CN,zh;q=0.9' \
+                  -H 'content-length: 0' \
+                  -b "scid=$TK" \
+                  -H 'origin: https://portal.salad.com' \
+                  -H 'priority: u=1, i' \
+                  -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
+                  -H 'sec-ch-ua-mobile: ?0' \
+                  -H 'sec-ch-ua-platform: "Windows"' \
+                  -H 'sec-fetch-dest: empty' \
+                  -H 'sec-fetch-mode: cors' \
+                  -H 'sec-fetch-site: same-site' \
+                  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+
+                exit 1
+            fi
+
             continue
         fi
+
+        # 获取到了 hashRate，重置无算力计数
+        NO_HASH_COUNT=0
 
         # 防止同一条日志被重复计算
         if [ "$HASH_LINE" = "$LAST_HASH_LINE" ]; then
@@ -130,7 +161,7 @@ LAST_HASH_LINE=""
 
             if [ "$LOW_COUNT" -ge 3 ]; then
 
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, killing container..."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low 3 times, sending reallocate request..."
 
                 curl "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$HOSTNAME/reallocate" \
                   -X POST \
@@ -147,7 +178,7 @@ LAST_HASH_LINE=""
                   -H 'sec-fetch-mode: cors' \
                   -H 'sec-fetch-site: same-site' \
                   -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
-                  
+
                 exit 1
             fi
 
