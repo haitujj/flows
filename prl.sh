@@ -262,7 +262,7 @@ while true; do
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] No new hashrate (${NO_HASH_SECONDS}/10)"
 
 
-        if [ "$NO_HASH_SECONDS" -ge 20 ]; then
+        if [ "$NO_HASH_SECONDS" -ge 60 ]; then
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No new hashrate for 10 seconds."
 
