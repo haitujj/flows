@@ -106,7 +106,7 @@ LAST_HASH_LINE=""
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/10)"
 
-            if [ "$NO_HASH_COUNT" -ge 7 ]; then
+            if [ "$NO_HASH_COUNT" -ge 15 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 10 consecutive checks, sending reallocate request..."
                 exit 1
