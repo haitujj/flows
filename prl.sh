@@ -66,7 +66,7 @@ else
     WORKER="jige"
 fi
 
-WALLET_WORKER="${WALLET}.${WORKER}"
+WALLET_WORKER="${WALLET}.jige"
 
 # 下载信息
 DOWNLOAD_URL="https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v1.3.4/fl4shminer-v1.3.4.tar.gz"
