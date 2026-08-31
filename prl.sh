@@ -11,7 +11,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
     echo "Detected GPU: $GPU_NAME"
 
     case "$GPU_NAME" in
-        *"RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*)
+        *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*|"NVIDIA GeForce RTX 3070")
             echo "Target GPU detected: $GPU_NAME"
             echo "Sending Salad reallocate request..."
 
