@@ -204,9 +204,4 @@ LAST_HASH_LINE=""
  
 cd "$EXTRACT_DIR" || exit 1 
  
-./fl4shminer \ 
-    -a "$ALGO" \ 
-    -pool "$POOL" \ 
-    -w "$WALLET_WORKER" \ 
-    -pass x \ 
-    2>&1 | tee -a /miner.log 
+./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
