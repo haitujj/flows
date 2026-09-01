@@ -168,11 +168,11 @@ chmod +x "$BINARY" 2>/dev/null
 # ==============================
 # Hashrate 监控
 # 每 5 秒检查
-# 连续 3 次低于 88 TH/s
+# 连续 3 次低于 8x TH/s
 # 强制退出容器
 # ==============================
 
-MIN_HASHRATE=88
+MIN_HASHRATE=80
 NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_STATE=""
