@@ -16,7 +16,7 @@ if [ "$GPU_COUNT" -eq 1 ]; then
                 curl --request POST \
                   --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
                   --header "Salad-Api-Key: $key"
-                  sleep 2
+                  exit 1
             done
             ;;
 
@@ -112,8 +112,7 @@ LAST_HASH_STATE=""
                     for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                         kill -9 "$PID" 2>/dev/null || true
                     done
-                    
-                    sleep 2
+                    exit 1
                 done
 
             fi
@@ -222,8 +221,7 @@ LAST_HASH_STATE=""
                     for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                         kill -9 "$PID" 2>/dev/null || true
                     done
-                    
-                    sleep 2
+                    exit 1
                 done
 
             fi
