@@ -12,110 +12,22 @@ if [ "$GPU_COUNT" -eq 1 ]; then
 
     case "$GPU_NAME" in
         *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*)
-            echo "Target GPU detected: $GPU_NAME"
-            echo "Sending Salad reallocate request..."
             while true; do
-            
-                HTTP_CODE=$(curl -sS \
-                  --connect-timeout 5 \
-                  --max-time 15 \
-                  -o /tmp/reallocate_response.txt \
-                  -w "%{http_code}" \
-                  "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
-                  -X POST \
-                  -H 'accept: */*' \
-                  -H 'accept-language: zh-CN,zh;q=0.9' \
-                  -H 'content-length: 0' \
-                  -b "scid=$TK" \
-                  -H 'origin: https://portal.salad.com' \
-                  -H 'priority: u=1, i' \
-                  -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                  -H 'sec-ch-ua-mobile: ?0' \
-                  -H 'sec-ch-ua-platform: "Windows"' \
-                  -H 'sec-fetch-dest: empty' \
-                  -H 'sec-fetch-mode: cors' \
-                  -H 'sec-fetch-site: same-site' \
-                  -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36')
-            
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
-            
-                if [ -f /tmp/reallocate_response.txt ]; then
-                    cat /tmp/reallocate_response.txt
-                fi
-            
-            
-                # ==================================================
-                # 202 = 成功
-                # Salad 已接受 reallocate
-                # ==================================================
-            
-                if [ "$HTTP_CODE" = "202" ]; then
-            
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
-            
-                    echo "Stopping Fl4shMiner..."
-            
-                    pkill -9 -x fl4shminer 2>/dev/null || true
-                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
-            
-                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                        kill -9 "$PID" 2>/dev/null || true
-                    done
-            
-                    echo "All Fl4shMiner processes killed."
-            
-                    exit 1
-                fi
-            
-            
-                # ==================================================
-                # 任何其他 HTTP 状态码
-                # 全部退出
-                # ==================================================
-            
-                if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
-            
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
-            
-                    echo "Stopping Fl4shMiner..."
-            
-                    pkill -9 -x fl4shminer 2>/dev/null || true
-                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
-            
-                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                        kill -9 "$PID" 2>/dev/null || true
-                    done
-            
-                    echo "All Fl4shMiner processes killed."
-            
-                    exit 1
-                fi
-            
-            
-                # ==================================================
-                # curl 请求失败
-                # 例如：
-                # 000 = DNS失败、连接失败、超时等
-                # ==================================================
-            
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
-            
-                echo "Stopping Fl4shMiner..."
-            
+                curl --request POST \
+                  --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
+                  --header "Salad-Api-Key: $key"
+                
+                # 杀掉所有 Fl4shMiner
                 pkill -9 -x fl4shminer 2>/dev/null || true
                 pkill -9 -f 'fl4shminer' 2>/dev/null || true
-            
+                
                 for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                     kill -9 "$PID" 2>/dev/null || true
                 done
-            
-                echo "All Fl4shMiner processes killed."
-            
+                
                 exit 1
             
             done
-            echo
-            echo "Reallocate request sent."
             ;;
 
         *)
@@ -199,104 +111,19 @@ LAST_HASH_STATE=""
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
 
                 while true; do
-                
-                    HTTP_CODE=$(curl -sS \
-                      --connect-timeout 5 \
-                      --max-time 15 \
-                      -o /tmp/reallocate_response.txt \
-                      -w "%{http_code}" \
-                      "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
-                      -X POST \
-                      -H 'accept: */*' \
-                      -H 'accept-language: zh-CN,zh;q=0.9' \
-                      -H 'content-length: 0' \
-                      -b "scid=$TK" \
-                      -H 'origin: https://portal.salad.com' \
-                      -H 'priority: u=1, i' \
-                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                      -H 'sec-ch-ua-mobile: ?0' \
-                      -H 'sec-ch-ua-platform: "Windows"' \
-                      -H 'sec-fetch-dest: empty' \
-                      -H 'sec-fetch-mode: cors' \
-                      -H 'sec-fetch-site: same-site' \
-                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36')
-                
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
-                
-                    if [ -f /tmp/reallocate_response.txt ]; then
-                        cat /tmp/reallocate_response.txt
-                    fi
-                
-                
-                    # ==================================================
-                    # 202 = 成功
-                    # Salad 已接受 reallocate
-                    # ==================================================
-                
-                    if [ "$HTTP_CODE" = "202" ]; then
-                
-                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
-                
-                        echo "Stopping Fl4shMiner..."
-                
-                        pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                            kill -9 "$PID" 2>/dev/null || true
-                        done
-                
-                        echo "All Fl4shMiner processes killed."
-                
-                        exit 1
-                    fi
-                
-                
-                    # ==================================================
-                    # 任何其他 HTTP 状态码
-                    # 全部退出
-                    # ==================================================
-                
-                    if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
-                
-                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
-                
-                        echo "Stopping Fl4shMiner..."
-                
-                        pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                            kill -9 "$PID" 2>/dev/null || true
-                        done
-                
-                        echo "All Fl4shMiner processes killed."
-                
-                        exit 1
-                    fi
-                
-                
-                    # ==================================================
-                    # curl 请求失败
-                    # 例如：
-                    # 000 = DNS失败、连接失败、超时等
-                    # ==================================================
-                
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
-                
-                    echo "Stopping Fl4shMiner..."
-                
+                    curl --request POST \
+                      --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
+                      --header "Salad-Api-Key: $key"
+                    
+                    # 杀掉所有 Fl4shMiner
                     pkill -9 -x fl4shminer 2>/dev/null || true
                     pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
+                    
                     for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                         kill -9 "$PID" 2>/dev/null || true
                     done
-                
-                    echo "All Fl4shMiner processes killed."
-                
+                    
                     exit 1
-                
                 done
 
             fi
@@ -394,104 +221,19 @@ LAST_HASH_STATE=""
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total hashrate too low 3 times, sending reallocate request..."
                 while true; do
-                
-                    HTTP_CODE=$(curl -sS \
-                      --connect-timeout 5 \
-                      --max-time 15 \
-                      -o /tmp/reallocate_response.txt \
-                      -w "%{http_code}" \
-                      "https://portal-api.salad.com/api/portal/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate" \
-                      -X POST \
-                      -H 'accept: */*' \
-                      -H 'accept-language: zh-CN,zh;q=0.9' \
-                      -H 'content-length: 0' \
-                      -b "scid=$TK" \
-                      -H 'origin: https://portal.salad.com' \
-                      -H 'priority: u=1, i' \
-                      -H 'sec-ch-ua: "Chromium";v="148", "Google Chrome";v="148", "Not/A)Brand";v="99"' \
-                      -H 'sec-ch-ua-mobile: ?0' \
-                      -H 'sec-ch-ua-platform: "Windows"' \
-                      -H 'sec-fetch-dest: empty' \
-                      -H 'sec-fetch-mode: cors' \
-                      -H 'sec-fetch-site: same-site' \
-                      -H 'user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36')
-                
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate HTTP status: $HTTP_CODE"
-                
-                    if [ -f /tmp/reallocate_response.txt ]; then
-                        cat /tmp/reallocate_response.txt
-                    fi
-                
-                
-                    # ==================================================
-                    # 202 = 成功
-                    # Salad 已接受 reallocate
-                    # ==================================================
-                
-                    if [ "$HTTP_CODE" = "202" ]; then
-                
-                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate accepted (202)."
-                
-                        echo "Stopping Fl4shMiner..."
-                
-                        pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                            kill -9 "$PID" 2>/dev/null || true
-                        done
-                
-                        echo "All Fl4shMiner processes killed."
-                
-                        exit 1
-                    fi
-                
-                
-                    # ==================================================
-                    # 任何其他 HTTP 状态码
-                    # 全部退出
-                    # ==================================================
-                
-                    if [[ "$HTTP_CODE" =~ ^[0-9]{3}$ ]]; then
-                
-                        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Reallocate failed with HTTP $HTTP_CODE."
-                
-                        echo "Stopping Fl4shMiner..."
-                
-                        pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                            kill -9 "$PID" 2>/dev/null || true
-                        done
-                
-                        echo "All Fl4shMiner processes killed."
-                
-                        exit 1
-                    fi
-                
-                
-                    # ==================================================
-                    # curl 请求失败
-                    # 例如：
-                    # 000 = DNS失败、连接失败、超时等
-                    # ==================================================
-                
-                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] curl request failed."
-                
-                    echo "Stopping Fl4shMiner..."
-                
+                    curl --request POST \
+                      --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
+                      --header "Salad-Api-Key: $key"
+                    
+                    # 杀掉所有 Fl4shMiner
                     pkill -9 -x fl4shminer 2>/dev/null || true
                     pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
+                    
                     for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                         kill -9 "$PID" 2>/dev/null || true
                     done
-                
-                    echo "All Fl4shMiner processes killed."
-                
+                    
                     exit 1
-                
                 done
 
             fi
@@ -504,11 +246,6 @@ LAST_HASH_STATE=""
 
     done
 ) &
- 
- 
-# ============================== 
-# 启动矿工 
-# ============================== 
  
 cd "$EXTRACT_DIR" || exit 1 
  
