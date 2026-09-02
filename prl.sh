@@ -50,9 +50,10 @@ fi
 
 WALLET_WORKER="${WALLET}.jige"
 
+rm -rf /fl4shminer
 # 下载信息
-DOWNLOAD_URL="https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v1.3.4/fl4shminer-v1.3.4.tar.gz"
-TARBALL="fl4shminer-v1.3.4.tar.gz"
+DOWNLOAD_URL="https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v1.3.6/fl4shminer-v1.3.6.tar.gz"
+TARBALL="fl4shminer-v1.3.6.tar.gz"
 EXTRACT_DIR="fl4shminer"
 BINARY="$EXTRACT_DIR/fl4shminer"
 
