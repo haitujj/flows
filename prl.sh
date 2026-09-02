@@ -11,22 +11,12 @@ if [ "$GPU_COUNT" -eq 1 ]; then
     echo "Detected GPU: $GPU_NAME"
 
     case "$GPU_NAME" in
-        *"RNVIDIA GeForce RTX 3070 Laptop GPU"*|*"3060"*|*"2080"*)
+        *"3070 Laptop GPU"*|*"3060"*|*"2080"*)
             while true; do
                 curl --request POST \
                   --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
                   --header "Salad-Api-Key: $key"
-                
-                # 杀掉所有 Fl4shMiner
-                pkill -9 -x fl4shminer 2>/dev/null || true
-                pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                    kill -9 "$PID" 2>/dev/null || true
-                done
-                
-                exit 1
-            
+                  sleep 2
             done
             ;;
 
@@ -123,7 +113,7 @@ LAST_HASH_STATE=""
                         kill -9 "$PID" 2>/dev/null || true
                     done
                     
-                    exit 1
+                    sleep 2
                 done
 
             fi
@@ -233,7 +223,7 @@ LAST_HASH_STATE=""
                         kill -9 "$PID" 2>/dev/null || true
                     done
                     
-                    exit 1
+                    sleep 2
                 done
 
             fi
