@@ -51,22 +51,22 @@ fi
 WALLET_WORKER="${WALLET}.jige"
 
 rm -rf /fl4shminer
-# 下载信息
-DOWNLOAD_URL="https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v1.3.6/fl4shminer-v1.3.6.tar.gz"
-TARBALL="fl4shminer-v1.3.6.tar.gz"
+cd /
+
+VERSION=$(curl -fsSL https://api.github.com/repos/Fl4sh9174/Fl4shMiner/releases/latest \
+  | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+
+TARBALL="fl4shminer-v${VERSION}.tar.gz"
 EXTRACT_DIR="fl4shminer"
 BINARY="$EXTRACT_DIR/fl4shminer"
 
-# 若目录不存在则下载并解压
-if [ ! -d "$EXTRACT_DIR" ]; then
-    wget -q "$DOWNLOAD_URL" -O "$TARBALL"
-    tar -xf "$TARBALL"
-    rm -f "$TARBALL"
-fi
+echo "最新版本: v$VERSION"
 
-# 确保可执行
-chmod +x "$BINARY" 2>/dev/null
+wget -q \
+  "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}" \
+  -O "$TARBALL"
 
+tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
 
 # ==============================
 # Hashrate 监控
