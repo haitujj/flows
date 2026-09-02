@@ -74,7 +74,7 @@ chmod +x "$BINARY" 2>/dev/null
 # 强制退出容器
 # ==============================
 
-MIN_HASHRATE=80
+MIN_HASHRATE=82
 NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_STATE=""
@@ -96,7 +96,7 @@ LAST_HASH_STATE=""
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
 
-            if [ "$NO_HASH_COUNT" -ge 40 ]; then
+            if [ "$NO_HASH_COUNT" -ge 60 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
 
