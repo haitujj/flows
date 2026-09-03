@@ -1,5 +1,23 @@
 #!/bin/bash
 
+
+reallocate() {
+
+    curl --request POST \
+      --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
+      --header "Salad-Api-Key: $key"
+      
+    # 杀掉所有 Fl4shMiner
+    pkill -9 -x fl4shminer 2>/dev/null || true
+    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+    
+    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+        kill -9 "$PID" 2>/dev/null || true
+    done
+    
+}
+
+
 GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
 
 echo "Detected GPU count: $GPU_COUNT"
@@ -11,13 +29,9 @@ if [ "$GPU_COUNT" -eq 1 ]; then
     echo "Detected GPU: $GPU_NAME"
 
     case "$GPU_NAME" in
-        *"3070 Laptop GPU"*|*"3060"*|*"2080"*)
-            while true; do
-                curl --request POST \
-                  --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
-                  --header "Salad-Api-Key: $key"
-                  exit 1
-            done
+        *"3070 Laptop GPU"*|*"3060"*|*"2080"*|*"A4000"*)
+                reallocate
+                exit 1
             ;;
 
         *)
@@ -84,6 +98,12 @@ LAST_HASH_STATE=""
     while true; do
         sleep 1
 
+        # 检测 GPU run error，出现立即触发重新分配并退出
+        if grep -q "GPU run err:" /miner.log; then
+            reallocate
+            exit 1
+        fi
+
         # ==================================================
         # 获取每张 GPU 最新一次 hashRate
         # 每个 Device 只保留最新值
@@ -98,24 +118,8 @@ LAST_HASH_STATE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
 
             if [ "$NO_HASH_COUNT" -ge 60 ]; then
-
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
-
-                while true; do
-                    curl --request POST \
-                      --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
-                      --header "Salad-Api-Key: $key"
-                    
-                    # 杀掉所有 Fl4shMiner
-                    pkill -9 -x fl4shminer 2>/dev/null || true
-                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                    
-                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                        kill -9 "$PID" 2>/dev/null || true
-                    done
-                    exit 1
-                done
-
+                reallocate
+                exit 1
             fi
 
             continue
@@ -206,24 +210,9 @@ LAST_HASH_STATE=""
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
 
-
             if [ "$LOW_COUNT" -ge 3 ]; then
-
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total hashrate too low 3 times, sending reallocate request..."
-                while true; do
-                    curl --request POST \
-                      --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
-                      --header "Salad-Api-Key: $key"
-                    
-                    # 杀掉所有 Fl4shMiner
-                    pkill -9 -x fl4shminer 2>/dev/null || true
-                    pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                    
-                    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                        kill -9 "$PID" 2>/dev/null || true
-                    done
-                    exit 1
-                done
+                reallocate
+                exit 1
 
             fi
 
