@@ -76,9 +76,24 @@ BINARY="$EXTRACT_DIR/fl4shminer"
 
 echo "最新版本: v$VERSION"
 
-wget -q \
-  "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}" \
-  -O "$TARBALL"
+timeout 60s aria2c \
+    -x 16 \
+    -s 16 \
+    -k 1M \
+    --file-allocation=none \
+    --connect-timeout=5 \
+    --timeout=10 \
+    --max-tries=3 \
+    --retry-wait=2 \
+    --summary-interval=5 \
+    -o "$TARBALL" \
+    "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}"
+
+if [ $? -ne 0 ]; then
+    echo "下载失败或超过 60 秒，退出"
+    reallocate
+    exit 1
+fi
 
 tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
 
