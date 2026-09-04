@@ -100,7 +100,17 @@ LAST_HASH_STATE=""
 
         # 检测 GPU run error，出现立即触发重新分配并退出
         if grep -q "GPU run err:" /miner.log; then
-            reallocate
+
+            curl --request POST \
+              --url $SALAD_METADATA_URI/v1/recreate \
+              --header 'Metadata: true'
+            # 杀掉所有 Fl4shMiner
+            pkill -9 -x fl4shminer 2>/dev/null || true
+            pkill -9 -f 'fl4shminer' 2>/dev/null || true
+            
+            for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                kill -9 "$PID" 2>/dev/null || true
+            done
             exit 1
         fi
 
