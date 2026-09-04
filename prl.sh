@@ -100,18 +100,22 @@ LAST_HASH_STATE=""
 
         # 检测 GPU run error，出现立即触发重新分配并退出
         if grep -q "GPU run err:" /miner.log; then
-
-            curl --request POST \
-              --url $SALAD_METADATA_URI/v1/recreate \
-              --header 'Metadata: true'
+        while true; do
+            curl -sS --request POST \
+              --url "$SALAD_METADATA_URI/v1/recreate" \
+              --header 'Metadata: true' \
+              || true
+        
             # 杀掉所有 Fl4shMiner
             pkill -9 -x fl4shminer 2>/dev/null || true
             pkill -9 -f 'fl4shminer' 2>/dev/null || true
-            
+        
             for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                 kill -9 "$PID" 2>/dev/null || true
             done
-            exit 1
+        
+            sleep 2
+        done
         fi
 
         # ==================================================
@@ -128,8 +132,10 @@ LAST_HASH_STATE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
 
             if [ "$NO_HASH_COUNT" -ge 60 ]; then
-                reallocate
-                exit 1
+                while true; do
+                    reallocate
+                    sleep 2
+                done
             fi
 
             continue
@@ -221,9 +227,10 @@ LAST_HASH_STATE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
 
             if [ "$LOW_COUNT" -ge 3 ]; then
-                reallocate
-                exit 1
-
+                while true; do
+                    reallocate
+                    sleep 2
+                done
             fi
 
         else
