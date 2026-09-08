@@ -49,6 +49,28 @@ else
 
 fi
 
+(
+    # 最多等待 120 秒
+    for i in $(seq 1 120); do
+
+        if [ -f /miner.log ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] miner.log detected."
+            exit 0
+        fi
+
+        sleep 1
+    done
+
+    # 120 秒后仍然不存在
+    if [ ! -f /miner.log ]; then
+        # 持续触发 recreate
+        while true; do
+            reallocate
+            sleep 2
+        done
+    fi
+) &
+
 # 固定参数
 ALGO="pearlhash"
 POOL="stratum+tcp://prl.kryptex.network:7048"
@@ -115,22 +137,10 @@ LAST_HASH_STATE=""
 
         # 检测 GPU run error，出现立即触发重新分配并退出
         if grep -q "GPU run err:" /miner.log; then
-        while true; do
-            curl -sS --request POST \
-              --url "$SALAD_METADATA_URI/v1/recreate" \
-              --header 'Metadata: true' \
-              || true
-        
-            # 杀掉所有 Fl4shMiner
-            pkill -9 -x fl4shminer 2>/dev/null || true
-            pkill -9 -f 'fl4shminer' 2>/dev/null || true
-        
-            for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                kill -9 "$PID" 2>/dev/null || true
+            while true; do
+                reallocate
+                sleep 2
             done
-        
-            sleep 2
-        done
         fi
 
         # ==================================================
