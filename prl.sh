@@ -130,31 +130,67 @@ MIN_HASHRATE=82
 NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_STATE=""
-
+GPU_ERROR_COUNT=0
+LAST_GPU_ERROR_LINE=""
 (
     while true; do
         sleep 1
 
         # ==================================================
-        # 检测 GPU run error
+        # GPU stopped / Watchdog restart failed 检测
         # ==================================================
-        if grep -q "GPU run err:" /miner.log 2>/dev/null; then
+        
+        GPU_ERROR_LINE=$(grep -E \
+            'Watchdog: GPU .* stopped|Watchdog restart failed:' \
+            /miner.log 2>/dev/null | tail -n 1)
+        
+        if [ -n "$GPU_ERROR_LINE" ]; then
+        
+            # 防止每秒重复统计同一条日志
+            if [ "$GPU_ERROR_LINE" != "$LAST_GPU_ERROR_LINE" ]; then
+        
+                LAST_GPU_ERROR_LINE="$GPU_ERROR_LINE"
+        
+                GPU_ERROR_COUNT=$((GPU_ERROR_COUNT + 1))
+        
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU stopped/restart failed detected (${GPU_ERROR_COUNT}/3)"
+                echo "$GPU_ERROR_LINE"
+        
+                # ==================================================
+                # 连续/累计 3 次触发 restart
+                # ==================================================
+        
+                if [ "$GPU_ERROR_COUNT" -ge 3 ]; then
+        
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU error detected 3 times, restarting container..."
+        
+                    while true; do
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU run err detected."
-
-            while true; do
-                curl --request POST \
-                  --url http://169.254.169.254/v1/restart \
-                  --header 'Metadata: true'
-                 # 杀掉所有 Fl4shMiner
-                pkill -9 -x fl4shminer 2>/dev/null || true
-                pkill -9 -f 'fl4shminer' 2>/dev/null || true
-                
-                for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
-                    kill -9 "$PID" 2>/dev/null || true
-                done
-                sleep 2
-            done
+                         # 杀掉所有 Fl4shMiner
+                        pkill -9 -x fl4shminer 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
+        
+                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                            kill -9 "$PID" 2>/dev/null || true
+                        done
+        
+                        curl --request POST \
+                          --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/recreate \
+                          --header "Salad-Api-Key: $key"
+        
+                        sleep 2
+        
+                    done
+        
+                fi
+        
+            fi
+        
+        else
+        
+            # 没有检测到错误，重置计数
+            GPU_ERROR_COUNT=0
+        
         fi
 
 
