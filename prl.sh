@@ -135,28 +135,36 @@ LAST_HASH_STATE=""
     while true; do
         sleep 1
 
-        # 检测 GPU run error，出现立即触发重新分配并退出
-        if grep -q "GPU run err:" /miner.log; then
+        # ==================================================
+        # 检测 GPU run error
+        # ==================================================
+        if grep -q "GPU run err:" /miner.log 2>/dev/null; then
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU run err detected."
+
             while true; do
                 reallocate
                 sleep 2
             done
         fi
 
-        # ==================================================
-        # 获取每张 GPU 最新一次 hashRate
-        # 每个 Device 只保留最新值
-        # ==================================================
 
-        HASH_DATA=$(grep 'Device \[[0-9]\+\] hashRate:' /miner.log 2>/dev/null)
+        # ==================================================
+        # 获取所有 hashRate 日志
+        # 支持 TH/s 和 PH/s
+        # ==================================================
+        HASH_DATA=$(grep -E 'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' /miner.log 2>/dev/null)
 
         if [ -z "$HASH_DATA" ]; then
 
             NO_HASH_COUNT=$((NO_HASH_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/60)"
 
             if [ "$NO_HASH_COUNT" -ge 60 ]; then
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 60 seconds."
+
                 while true; do
                     reallocate
                     sleep 2
@@ -169,33 +177,64 @@ LAST_HASH_STATE=""
 
         # ==================================================
         # 每个 Device 只取最后一次 hashRate
-        # 然后计算所有 GPU 最新总算力
         # ==================================================
-
         HASH_STATE=$(echo "$HASH_DATA" | awk '
         {
-            if (match($0, /Device \[[0-9]+\] hashRate: [0-9.]+ TH\/s/)) {
+            device = ""
+            rate = ""
+            unit = ""
 
-                line = substr($0, RSTART, RLENGTH)
+            if (match($0, /Device \[[0-9]+\]/)) {
+                device = substr($0, RSTART, RLENGTH)
+            }
 
-                match(line, /Device \[[0-9]+\]/)
-                device = substr(line, RSTART, RLENGTH)
+            if (match($0, /hashRate: [0-9.]+/)) {
+                rate_text = substr($0, RSTART, RLENGTH)
+                sub("hashRate: ", "", rate_text)
+                rate = rate_text
+            }
 
-                match(line, /hashRate: [0-9.]+/)
-                rate = substr(line, RSTART + 10, RLENGTH - 10)
+            if ($0 ~ /PH\/s/) {
+                unit = "PH/s"
+            } else if ($0 ~ /TH\/s/) {
+                unit = "TH/s"
+            }
 
-                latest[device] = rate
+            if (device != "" && rate != "" && unit != "") {
+                latest_rate[device] = rate
+                latest_unit[device] = unit
             }
         }
 
         END {
             total = 0
+            has_ph = 0
 
-            for (device in latest) {
-                total += latest[device]
-                printf "%s=%s\n", device, latest[device]
+            # 固定按照 Device 编号排序输出
+            for (i = 0; i <= 32; i++) {
+
+                device = "Device [" i "]"
+
+                if (device in latest_rate) {
+
+                    rate = latest_rate[device]
+                    unit = latest_unit[device]
+
+                    if (unit == "PH/s") {
+                        has_ph = 1
+
+                        printf "%s=%.2f PH/s\n", device, rate
+
+                    } else {
+
+                        total += rate
+
+                        printf "%s=%.2f TH/s\n", device, rate
+                    }
+                }
             }
 
+            printf "HAS_PH=%d\n", has_ph
             printf "TOTAL=%.2f\n", total
         }
         ')
@@ -207,9 +246,29 @@ LAST_HASH_STATE=""
 
 
         # ==================================================
+        # 获取是否存在 PH/s
+        # ==================================================
+        HAS_PH=$(echo "$HASH_STATE" | awk -F= '$1=="HAS_PH" {print $2}')
+
+        # ==================================================
+        # 只要存在 PH/s，直接认为算力正常
+        # ==================================================
+        if [ "$HAS_PH" = "1" ]; then
+
+            echo "$HASH_STATE" | grep '^Device'
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient."
+
+            LOW_COUNT=0
+            NO_HASH_COUNT=0
+
+            continue
+        fi
+
+
+        # ==================================================
         # 防止同一组数据重复判断
         # ==================================================
-
         if [ "$HASH_STATE" = "$LAST_HASH_STATE" ]; then
             continue
         fi
@@ -220,11 +279,9 @@ LAST_HASH_STATE=""
 
 
         # ==================================================
-        # 提取总算力
+        # 获取总 TH/s
         # ==================================================
-
         TOTAL_HASHRATE=$(echo "$HASH_STATE" | awk -F= '$1=="TOTAL" {print $2}')
-
 
         if [ -z "$TOTAL_HASHRATE" ]; then
             continue
@@ -232,11 +289,9 @@ LAST_HASH_STATE=""
 
 
         # ==================================================
-        # 输出每张 GPU 最新算力
+        # 输出 GPU 算力
         # ==================================================
-
         echo "$HASH_STATE" | grep '^Device'
-
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
 
@@ -244,7 +299,6 @@ LAST_HASH_STATE=""
         # ==================================================
         # 判断总算力
         # ==================================================
-
         if awk "BEGIN {exit !($TOTAL_HASHRATE < $MIN_HASHRATE)}"; then
 
             LOW_COUNT=$((LOW_COUNT + 1))
@@ -252,6 +306,9 @@ LAST_HASH_STATE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
 
             if [ "$LOW_COUNT" -ge 3 ]; then
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low, triggering reallocate."
+
                 while true; do
                     reallocate
                     sleep 2
