@@ -143,7 +143,16 @@ LAST_HASH_STATE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU run err detected."
 
             while true; do
-                reallocate
+                curl --request POST \
+                  --url http://169.254.169.254/v1/restart \
+                  --header 'Metadata: true'
+                 # 杀掉所有 Fl4shMiner
+                pkill -9 -x fl4shminer 2>/dev/null || true
+                pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                
+                for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                    kill -9 "$PID" 2>/dev/null || true
+                done
                 sleep 2
             done
         fi
