@@ -127,84 +127,129 @@ tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
 # ==============================
 
 MIN_HASHRATE=82
+
 NO_HASH_COUNT=0
 LOW_COUNT=0
 LAST_HASH_STATE=""
+
 GPU_ERROR_COUNT=0
 LAST_GPU_ERROR_LINE=""
+
+# ==================================================
+# 其他检查是否继续执行
+# 1 = 执行
+# 0 = 停止
+# GPU stopped / Watchdog restart failed 不受此开关影响
+# ==================================================
+OTHER_CHECKS_ENABLED=1
+
+# 连续正常次数
+HEALTHY_COUNT=0
+HEALTHY_THRESHOLD=10
+
+
 (
     while true; do
         sleep 1
 
+
         # ==================================================
         # GPU stopped / Watchdog restart failed 检测
+        # 此检测永远执行，不受 OTHER_CHECKS_ENABLED 影响
         # ==================================================
-        
+
         GPU_ERROR_LINE=$(grep -E \
             'Watchdog: GPU .* stopped|Watchdog restart failed:' \
             /miner.log 2>/dev/null | tail -n 1)
-        
+
         if [ -n "$GPU_ERROR_LINE" ]; then
-        
+
             # 防止每秒重复统计同一条日志
             if [ "$GPU_ERROR_LINE" != "$LAST_GPU_ERROR_LINE" ]; then
-        
+
                 LAST_GPU_ERROR_LINE="$GPU_ERROR_LINE"
-        
+
                 GPU_ERROR_COUNT=$((GPU_ERROR_COUNT + 1))
-        
+
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU stopped/restart failed detected (${GPU_ERROR_COUNT}/3)"
                 echo "$GPU_ERROR_LINE"
-        
+
+
                 # ==================================================
-                # 连续/累计 3 次触发 restart
+                # 累计 3 次触发 recreate
                 # ==================================================
-        
+
                 if [ "$GPU_ERROR_COUNT" -ge 3 ]; then
-        
+
                     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU error detected 3 times, restarting container..."
-        
+
                     while true; do
 
-                         # 杀掉所有 Fl4shMiner
+                        # 杀掉所有 Fl4shMiner
                         pkill -9 -x fl4shminer 2>/dev/null || true
                         pkill -9 -f 'fl4shminer' 2>/dev/null || true
-        
+
                         for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
                             kill -9 "$PID" 2>/dev/null || true
                         done
-        
+
+
+                        # Salad recreate
                         curl --request POST \
-                          --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/recreate \
-                          --header "Salad-Api-Key: $key"
-        
+                            --url "https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/recreate" \
+                            --header "Salad-Api-Key: $key"
+
                         sleep 2
-        
+
                     done
-        
+
                 fi
-        
+
             fi
-        
+
         else
-        
-            # 没有检测到错误，重置计数
+
+            # 没有检测到 GPU 错误日志
             GPU_ERROR_COUNT=0
-        
+
         fi
+
+
+
+        # ==================================================
+        # 如果其他检查已经连续 10 次正常
+        # 后续只继续 GPU 错误检测
+        # ==================================================
+
+        if [ "$OTHER_CHECKS_ENABLED" -eq 0 ]; then
+            continue
+        fi
+
 
 
         # ==================================================
         # 获取所有 hashRate 日志
         # 支持 TH/s 和 PH/s
         # ==================================================
-        HASH_DATA=$(grep -E 'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' /miner.log 2>/dev/null)
+
+        HASH_DATA=$(grep -E \
+            'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' \
+            /miner.log 2>/dev/null)
+
+
+        # ==================================================
+        # 没有任何 hashRate
+        # ==================================================
 
         if [ -z "$HASH_DATA" ]; then
 
             NO_HASH_COUNT=$((NO_HASH_COUNT + 1))
 
+            # 无算力后，连续正常次数归零
+            HEALTHY_COUNT=0
+
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/60)"
+
 
             if [ "$NO_HASH_COUNT" -ge 60 ]; then
 
@@ -214,15 +259,19 @@ LAST_GPU_ERROR_LINE=""
                     reallocate
                     sleep 2
                 done
+
             fi
 
             continue
+
         fi
+
 
 
         # ==================================================
         # 每个 Device 只取最后一次 hashRate
         # ==================================================
+
         HASH_STATE=$(echo "$HASH_DATA" | awk '
         {
             device = ""
@@ -266,6 +315,7 @@ LAST_GPU_ERROR_LINE=""
                     unit = latest_unit[device]
 
                     if (unit == "PH/s") {
+
                         has_ph = 1
 
                         printf "%s=%.2f PH/s\n", device, rate
@@ -275,6 +325,7 @@ LAST_GPU_ERROR_LINE=""
                         total += rate
 
                         printf "%s=%.2f TH/s\n", device, rate
+
                     }
                 }
             }
@@ -290,65 +341,88 @@ LAST_GPU_ERROR_LINE=""
         fi
 
 
+
         # ==================================================
         # 获取是否存在 PH/s
         # ==================================================
+
         HAS_PH=$(echo "$HASH_STATE" | awk -F= '$1=="HAS_PH" {print $2}')
-
-        # ==================================================
-        # 只要存在 PH/s，直接认为算力正常
-        # ==================================================
-        if [ "$HAS_PH" = "1" ]; then
-
-            echo "$HASH_STATE" | grep '^Device'
-
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient."
-
-            LOW_COUNT=0
-            NO_HASH_COUNT=0
-
-            continue
-        fi
-
-
-        # ==================================================
-        # 防止同一组数据重复判断
-        # ==================================================
-        if [ "$HASH_STATE" = "$LAST_HASH_STATE" ]; then
-            continue
-        fi
-
-        LAST_HASH_STATE="$HASH_STATE"
-
-        NO_HASH_COUNT=0
 
 
         # ==================================================
         # 获取总 TH/s
         # ==================================================
+
         TOTAL_HASHRATE=$(echo "$HASH_STATE" | awk -F= '$1=="TOTAL" {print $2}')
+
 
         if [ -z "$TOTAL_HASHRATE" ]; then
             continue
         fi
 
 
+
+        # ==================================================
+        # PH/s 直接认为正常
+        # ==================================================
+
+        if [ "$HAS_PH" = "1" ]; then
+
+            echo "$HASH_STATE" | grep '^Device'
+
+            NO_HASH_COUNT=0
+            LOW_COUNT=0
+
+            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+
+
+            # ==================================================
+            # 连续 10 次正常
+            # 关闭其他算力检查
+            # GPU 检测继续
+            # ==================================================
+
+            if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
+
+                OTHER_CHECKS_ENABLED=0
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate has been healthy for ${HEALTHY_THRESHOLD} consecutive checks."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Other hashrate checks disabled. GPU watchdog detection remains active."
+
+            fi
+
+            continue
+
+        fi
+
+
+
         # ==================================================
         # 输出 GPU 算力
         # ==================================================
+
         echo "$HASH_STATE" | grep '^Device'
 
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
 
 
+
         # ==================================================
         # 判断总算力
         # ==================================================
+
         if awk "BEGIN {exit !($TOTAL_HASHRATE < $MIN_HASHRATE)}"; then
 
+            # 算力低于阈值
             LOW_COUNT=$((LOW_COUNT + 1))
 
+            # 不属于正常状态
+            HEALTHY_COUNT=0
+
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
+
 
             if [ "$LOW_COUNT" -ge 3 ]; then
 
@@ -358,15 +432,42 @@ LAST_GPU_ERROR_LINE=""
                     reallocate
                     sleep 2
                 done
+
             fi
 
         else
 
+            # ==================================================
+            # 算力正常
+            # ==================================================
+
             LOW_COUNT=0
+            NO_HASH_COUNT=0
+
+            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate normal. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+
+
+            # ==================================================
+            # 连续 10 次正常
+            # 关闭其他算力检查
+            # GPU 检测继续
+            # ==================================================
+
+            if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
+
+                OTHER_CHECKS_ENABLED=0
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate has been healthy for ${HEALTHY_THRESHOLD} consecutive checks."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Other hashrate checks disabled. GPU watchdog detection remains active."
+
+            fi
 
         fi
 
     done
+
 ) &
  
 cd "$EXTRACT_DIR" || exit 1 
