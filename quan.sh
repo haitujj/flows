@@ -1,5 +1,37 @@
 #!/bin/bash
 
+
+GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
+
+echo "Detected GPU count: $GPU_COUNT"
+
+if [ "$GPU_COUNT" -eq 1 ]; then
+
+    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1 | xargs)
+
+    echo "Detected GPU: $GPU_NAME"
+
+    case "$GPU_NAME" in
+        *"3070 Laptop GPU"*|*"3060"*)
+                reallocate
+                exit 1
+            ;;
+
+        *)
+            echo "GPU $GPU_NAME is not a target GPU, no request."
+            ;;
+    esac
+
+elif [ "$GPU_COUNT" -gt 1 ]; then
+
+    echo "Multiple GPUs detected ($GPU_COUNT), reallocate disabled."
+
+else
+
+    echo "No NVIDIA GPU detected, no request."
+
+fi
+
 LOG_FILE="/quanpool-miner.log"
 
 MIN_HASHRATE=300
