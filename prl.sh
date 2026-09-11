@@ -17,10 +17,26 @@ reallocate() {
 
 }
 
-
+# ==================================================
+# 检查 GPU 数量
+# 如果环境变量 GPU_COUNTS 有值，且 GPU 数量小于 2
+# 则一直执行 reallocate
+# ==================================================
 GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
 
 echo "Detected GPU count: $GPU_COUNT"
+
+if [ -n "$GPU_COUNTS" ] && [ "$GPU_COUNT" -lt 2 ]; then
+
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU count is ${GPU_COUNT}, less than 2. Triggering reallocate."
+
+    while true; do
+        reallocate
+        sleep 2
+    done
+
+fi
+
 
 if [ "$GPU_COUNT" -eq 1 ]; then
 
