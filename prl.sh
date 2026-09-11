@@ -67,57 +67,44 @@ PRL_POOLS=(
 )
 
 BEST_HOST=""
-BEST_LATENCY=999999
-
+BEST_LATENCY="999999"
 
 echo "=================================================="
 echo "Testing Kryptex PRL pool latency..."
 echo "=================================================="
 
-
 for HOST in "${PRL_POOLS[@]}"; do
-
-    # ==================================================
-    # 测试 TCP 连接延迟
-    # ==================================================
 
     LATENCY=$(curl -s \
         -o /dev/null \
         --connect-timeout 1 \
         --max-time 2 \
         -w '%{time_connect}' \
-        "telnet://${HOST}:${PRL_PORT}" 2>/dev/null)
+        "telnet://${HOST}:${PRL_PORT}" 2>/dev/null || true)
 
+    if [ -n "$LATENCY" ] && awk -v v="$LATENCY" '
+        BEGIN {
+            exit !(v + 0 > 0)
+        }
+    '; then
 
-    # ==================================================
-    # 判断测试结果
-    # ==================================================
-
-    if [ -n "$LATENCY" ]; then
-
-        LATENCY_MS=$(awk -v t="$LATENCY" 'BEGIN {
-            printf "%.2f", t * 1000
-        }')
+        LATENCY_MS=$(awk -v t="$LATENCY" '
+            BEGIN {
+                printf "%.2f", t * 1000
+            }
+        ')
 
         echo "${HOST}:${PRL_PORT} -> ${LATENCY_MS} ms"
 
-
-        # ==================================================
-        # 判断是否为当前最低延迟
-        # ==================================================
-
         if awk -v current="$LATENCY" -v best="$BEST_LATENCY" '
             BEGIN {
-                if (current < best)
+                if ((current + 0) < (best + 0))
                     exit 0
-                else
-                    exit 1
+                exit 1
             }
         '; then
-
             BEST_LATENCY="$LATENCY"
             BEST_HOST="$HOST"
-
         fi
 
     else
@@ -130,14 +117,16 @@ done
 
 
 # ==================================================
-# 判断最终结果
+# 选择最佳节点
 # ==================================================
 
 if [ -n "$BEST_HOST" ]; then
 
-    BEST_LATENCY_MS=$(awk -v t="$BEST_LATENCY" 'BEGIN {
-        printf "%.2f", t * 1000
-    }')
+    BEST_LATENCY_MS=$(awk -v t="$BEST_LATENCY" '
+        BEGIN {
+            printf "%.2f", t * 1000
+        }
+    ')
 
     echo "=================================================="
     echo "Best PRL pool:"
@@ -156,10 +145,6 @@ else
 
 fi
 
-
-# ==================================================
-# 最终矿池地址
-# ==================================================
 
 POOL="stratum+ssl://${BEST_HOST}:${PRL_PORT}"
 
