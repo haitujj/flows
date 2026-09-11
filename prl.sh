@@ -50,12 +50,12 @@ else
 fi
 
 # ==================================================
-# Kryptex PRL 自动选择最低延迟节点
+# Kryptex PRL 自动选择最低延迟矿池
 # ==================================================
 
-PRL_PORT=8048
+POOL_PORT=8048
 
-PRL_POOLS=(
+POOLS=(
     "prl.kryptex.network"
     "prl-eu.kryptex.network"
     "prl-us.kryptex.network"
@@ -66,50 +66,35 @@ PRL_POOLS=(
     "prl-ae.kryptex.network"
 )
 
-BEST_HOST=""
-BEST_LATENCY="999999"
+BEST_POOL=""
+BEST_LATENCY=999999
 
-echo "=================================================="
+echo "========================================"
 echo "Testing Kryptex PRL pool latency..."
-echo "=================================================="
+echo "========================================"
 
-for HOST in "${PRL_POOLS[@]}"; do
+for HOST in "${POOLS[@]}"; do
 
-    LATENCY=$(curl -s \
-        -o /dev/null \
-        --connect-timeout 1 \
-        --max-time 2 \
-        -w '%{time_connect}' \
-        "telnet://${HOST}:${PRL_PORT}" 2>/dev/null || true)
+    # TCP 连接测试
+    START_TIME=$(date +%s%N)
 
-    if [ -n "$LATENCY" ] && awk -v v="$LATENCY" '
-        BEGIN {
-            exit !(v + 0 > 0)
-        }
-    '; then
+    if timeout 3 bash -c "echo >/dev/tcp/$HOST/$POOL_PORT" 2>/dev/null; then
 
-        LATENCY_MS=$(awk -v t="$LATENCY" '
-            BEGIN {
-                printf "%.2f", t * 1000
-            }
-        ')
+        END_TIME=$(date +%s%N)
 
-        echo "${HOST}:${PRL_PORT} -> ${LATENCY_MS} ms"
+        # 纳秒 -> 毫秒
+        LATENCY=$(( (END_TIME - START_TIME) / 1000000 ))
 
-        if awk -v current="$LATENCY" -v best="$BEST_LATENCY" '
-            BEGIN {
-                if ((current + 0) < (best + 0))
-                    exit 0
-                exit 1
-            }
-        '; then
+        echo "$HOST:$POOL_PORT -> ${LATENCY} ms"
+
+        if [ "$LATENCY" -lt "$BEST_LATENCY" ]; then
             BEST_LATENCY="$LATENCY"
-            BEST_HOST="$HOST"
+            BEST_POOL="$HOST"
         fi
 
     else
 
-        echo "${HOST}:${PRL_PORT} -> FAILED"
+        echo "$HOST:$POOL_PORT -> FAILED"
 
     fi
 
@@ -117,36 +102,30 @@ done
 
 
 # ==================================================
-# 选择最佳节点
+# 选择最低延迟节点
 # ==================================================
 
-if [ -n "$BEST_HOST" ]; then
+if [ -n "$BEST_POOL" ]; then
 
-    BEST_LATENCY_MS=$(awk -v t="$BEST_LATENCY" '
-        BEGIN {
-            printf "%.2f", t * 1000
-        }
-    ')
+    POOL="stratum+ssl://${BEST_POOL}:${POOL_PORT}"
 
-    echo "=================================================="
-    echo "Best PRL pool:"
-    echo "${BEST_HOST}:${PRL_PORT}"
-    echo "Latency: ${BEST_LATENCY_MS} ms"
-    echo "=================================================="
+    echo "========================================"
+    echo "Best Kryptex PRL pool:"
+    echo "$POOL"
+    echo "Latency: ${BEST_LATENCY} ms"
+    echo "========================================"
 
 else
 
-    echo "=================================================="
     echo "ERROR: No Kryptex PRL pool is reachable."
-    echo "Using global pool as fallback."
-    echo "=================================================="
 
-    BEST_HOST="prl.kryptex.network"
+    # 保底 Global
+    POOL="stratum+ssl://prl.kryptex.network:${POOL_PORT}"
+
+    echo "Fallback pool:"
+    echo "$POOL"
 
 fi
-
-
-POOL="stratum+ssl://${BEST_HOST}:${PRL_PORT}"
 
 echo "POOL=${POOL}"
 # 固定参数
