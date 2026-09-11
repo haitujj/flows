@@ -177,14 +177,12 @@ BINARY="$EXTRACT_DIR/fl4shminer"
 
 echo "最新版本: v$VERSION"
 
-timeout 60s wget \
-  --timeout=10 \
-  --connect-timeout=5 \
+timeout 120s wget \
   -O "$TARBALL" \
   "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}"
 
 if [ $? -ne 0 ]; then
-    echo "下载失败或超过 60 秒，退出"
+    echo "下载失败或超过 120 秒，退出"
     reallocate
     exit 1
 fi
