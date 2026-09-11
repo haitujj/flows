@@ -168,26 +168,26 @@ WALLET_WORKER="${WALLET}.jige"
 rm -rf /fl4shminer
 cd /
 
-VERSION=$(curl -fsSL https://api.github.com/repos/Fl4sh9174/Fl4shMiner/releases/latest \
-  | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+# VERSION=$(curl -fsSL https://api.github.com/repos/Fl4sh9174/Fl4shMiner/releases/latest \
+#   | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
 
-TARBALL="fl4shminer-v${VERSION}.tar.gz"
-EXTRACT_DIR="fl4shminer"
-BINARY="$EXTRACT_DIR/fl4shminer"
+# TARBALL="fl4shminer-v${VERSION}.tar.gz"
+# EXTRACT_DIR="fl4shminer"
+# BINARY="$EXTRACT_DIR/fl4shminer"
 
-echo "最新版本: v$VERSION"
+# echo "最新版本: v$VERSION"
 
-timeout 120s wget \
-  -O "$TARBALL" \
-  "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}"
+# timeout 120s wget \
+#   -O "$TARBALL" \
+#   "https://github.com/Fl4sh9174/Fl4shMiner/releases/download/v${VERSION}/${TARBALL}"
 
-if [ $? -ne 0 ]; then
-    echo "下载失败或超过 120 秒，退出"
-    reallocate
-    exit 1
-fi
+# if [ $? -ne 0 ]; then
+#     echo "下载失败或超过 120 秒，退出"
+#     reallocate
+#     exit 1
+# fi
 
-tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
+# tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
 
 # ==============================
 # Hashrate 监控
@@ -540,6 +540,6 @@ HEALTHY_THRESHOLD=300
 
 ) &
  
-cd "$EXTRACT_DIR" || exit 1 
+cd /fl4shminer || exit 1 
  
 ./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
