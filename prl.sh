@@ -318,5 +318,5 @@ fi
     --algo pearlhash \
     --url pool.pearlhash.xyz:9000 \
     --user prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q \
-    --worker $WORKER \
+    --worker "$SALAD_CONTAINER_GROUP_NAM"_"$WORKER" \
     2>&1 | tee -a /miner.log
