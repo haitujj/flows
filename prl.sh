@@ -205,7 +205,7 @@ tar -xf "$TARBALL" && rm -f "$TARBALL" && chmod +x "$BINARY"
 # 强制退出容器
 # ==============================
 
-MIN_HASHRATE=82
+MIN_HASHRATE=75
 
 NO_HASH_COUNT=0
 LOW_COUNT=0
