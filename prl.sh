@@ -49,28 +49,6 @@ else
 
 fi
 
-(
-    # 最多等待 120 秒
-    for i in $(seq 1 120); do
-
-        if [ -f /miner.log ]; then
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] miner.log detected."
-            exit 0
-        fi
-
-        sleep 1
-    done
-
-    # 120 秒后仍然不存在
-    if [ ! -f /miner.log ]; then
-        # 持续触发 recreate
-        while true; do
-            reallocate
-            sleep 2
-        done
-    fi
-) &
-
 # ==================================================
 # Kryptex PRL 自动选择最低延迟节点
 # ==================================================
@@ -190,6 +168,29 @@ echo "POOL=${POOL}"
 # 固定参数
 ALGO="pearlhash"
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+
+
+(
+    # 最多等待 120 秒
+    for i in $(seq 1 120); do
+
+        if [ -f /miner.log ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] miner.log detected."
+            exit 0
+        fi
+
+        sleep 1
+    done
+
+    # 120 秒后仍然不存在
+    if [ ! -f /miner.log ]; then
+        # 持续触发 recreate
+        while true; do
+            reallocate
+            sleep 2
+        done
+    fi
+) &
 
 # 从 SALAD_MACHINE_ID 取前 8 位作为矿工名，若未设置则使用 "jige"
 MACHINE_ID="${SALAD_MACHINE_ID:-}"
