@@ -71,9 +71,124 @@ fi
     fi
 ) &
 
+# ==================================================
+# Kryptex PRL 自动选择最低延迟节点
+# ==================================================
+
+PRL_PORT=8048
+
+PRL_POOLS=(
+    "prl.kryptex.network"
+    "prl-eu.kryptex.network"
+    "prl-us.kryptex.network"
+    "prl-br.kryptex.network"
+    "prl-sg.kryptex.network"
+    "prl-hk.kryptex.network"
+    "prl-ru.kryptex.network"
+    "prl-ae.kryptex.network"
+)
+
+BEST_HOST=""
+BEST_LATENCY=999999
+
+
+echo "=================================================="
+echo "Testing Kryptex PRL pool latency..."
+echo "=================================================="
+
+
+for HOST in "${PRL_POOLS[@]}"; do
+
+    # ==================================================
+    # 测试 TCP 连接延迟
+    # ==================================================
+
+    LATENCY=$(curl -s \
+        -o /dev/null \
+        --connect-timeout 1 \
+        --max-time 2 \
+        -w '%{time_connect}' \
+        "telnet://${HOST}:${PRL_PORT}" 2>/dev/null)
+
+
+    # ==================================================
+    # 判断测试结果
+    # ==================================================
+
+    if [ -n "$LATENCY" ]; then
+
+        LATENCY_MS=$(awk -v t="$LATENCY" 'BEGIN {
+            printf "%.2f", t * 1000
+        }')
+
+        echo "${HOST}:${PRL_PORT} -> ${LATENCY_MS} ms"
+
+
+        # ==================================================
+        # 判断是否为当前最低延迟
+        # ==================================================
+
+        if awk -v current="$LATENCY" -v best="$BEST_LATENCY" '
+            BEGIN {
+                if (current < best)
+                    exit 0
+                else
+                    exit 1
+            }
+        '; then
+
+            BEST_LATENCY="$LATENCY"
+            BEST_HOST="$HOST"
+
+        fi
+
+    else
+
+        echo "${HOST}:${PRL_PORT} -> FAILED"
+
+    fi
+
+done
+
+
+# ==================================================
+# 判断最终结果
+# ==================================================
+
+if [ -n "$BEST_HOST" ]; then
+
+    BEST_LATENCY_MS=$(awk -v t="$BEST_LATENCY" 'BEGIN {
+        printf "%.2f", t * 1000
+    }')
+
+    echo "=================================================="
+    echo "Best PRL pool:"
+    echo "${BEST_HOST}:${PRL_PORT}"
+    echo "Latency: ${BEST_LATENCY_MS} ms"
+    echo "=================================================="
+
+else
+
+    echo "=================================================="
+    echo "ERROR: No Kryptex PRL pool is reachable."
+    echo "Using global pool as fallback."
+    echo "=================================================="
+
+    BEST_HOST="prl.kryptex.network"
+
+fi
+
+
+# ==================================================
+# 最终矿池地址
+# ==================================================
+
+POOL="stratum+ssl://${BEST_HOST}:${PRL_PORT}"
+
+echo "POOL=${POOL}"
+
 # 固定参数
 ALGO="pearlhash"
-POOL="stratum+tcp://prl.kryptex.network:7048"
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 
 # 从 SALAD_MACHINE_ID 取前 8 位作为矿工名，若未设置则使用 "jige"
