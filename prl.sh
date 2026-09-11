@@ -314,6 +314,8 @@ else
     WORKER="jige"
 fi
 
+rm -f /miner.log
+
 ./wildrig-multi \
     --algo pearlhash \
     --url pool.pearlhash.xyz:9000 \
