@@ -165,8 +165,8 @@ fi
 
 WALLET_WORKER="${WALLET}.jige"
 
-rm -rf /fl4shminer
-cd /
+# rm -rf /fl4shminer
+# cd /
 
 # VERSION=$(curl -fsSL https://api.github.com/repos/Fl4sh9174/Fl4shMiner/releases/latest \
 #   | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
