@@ -50,7 +50,7 @@ else
 fi
 
 
-MIN_HASHRATE=75
+MIN_HASHRATE="${HASHRATE:-75}"
 
 NO_HASH_COUNT=0
 LOW_COUNT=0
@@ -279,7 +279,7 @@ LAST_GPU_ERROR_LINE=""
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/10)"
 
 
-            if [ "$LOW_COUNT" -ge 10 ]; then
+            if [ "$LOW_COUNT" -ge 3 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low, triggering reallocate."
 
