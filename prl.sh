@@ -77,7 +77,7 @@ LAST_GPU_ERROR_LINE=""
 
 
 (
-    while true; do
+    for ((i=1; i<=500; i++)); do
 
         sleep 2
 
