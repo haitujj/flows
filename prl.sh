@@ -6,16 +6,21 @@ reallocate() {
     curl --request POST \
       --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
       --header "Salad-Api-Key: $key"
-
-    # 杀掉所有 wildrig-multi
-    pkill -9 -x wildrig-multi 2>/dev/null || true
-    pkill -9 -f 'wildrig-multi' 2>/dev/null || true
-
-    for PID in $(pgrep -f 'wildrig-multi' 2>/dev/null); do
+      
+    # 杀掉所有 Fl4shMiner
+    pkill -9 -x fl4shminer 2>/dev/null || true
+    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+    
+    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
         kill -9 "$PID" 2>/dev/null || true
     done
-
+    
 }
+
+
+GPU_COUNT=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | wc -l)
+
+echo "Detected GPU count: $GPU_COUNT"
 
 # ==================================================
 # 检查 GPU 数量
@@ -28,15 +33,11 @@ echo "Detected GPU count: $GPU_COUNT"
 
 if [ -n "$GPU_COUNTS" ] && [ "$GPU_COUNT" -lt 2 ]; then
 
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU count is ${GPU_COUNT}, less than 2. Triggering reallocate."
-
-    while true; do
-        reallocate
-        sleep 2
-    done
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU count is ${GPU_COUNT}, less than 2. Triggering reallocate." 
+    reallocate
+    exit 1
 
 fi
-
 
 if [ "$GPU_COUNT" -eq 1 ]; then
 
@@ -65,6 +66,128 @@ else
 
 fi
 
+# ==================================================
+# Kryptex PRL 自动选择最低延迟矿池
+# ==================================================
+
+POOL_PORT=8048
+
+POOLS=(
+    "prl.kryptex.network"
+    "prl-eu.kryptex.network"
+    "prl-us.kryptex.network"
+    "prl-br.kryptex.network"
+    "prl-sg.kryptex.network"
+    "prl-hk.kryptex.network"
+    "prl-ru.kryptex.network"
+    "prl-ae.kryptex.network"
+)
+
+BEST_POOL=""
+BEST_LATENCY=999999
+
+echo "========================================"
+echo "Testing Kryptex PRL pool latency..."
+echo "========================================"
+
+for HOST in "${POOLS[@]}"; do
+
+    # TCP 连接测试
+    START_TIME=$(date +%s%N)
+
+    if timeout 3 bash -c "echo >/dev/tcp/$HOST/$POOL_PORT" 2>/dev/null; then
+
+        END_TIME=$(date +%s%N)
+
+        # 纳秒 -> 毫秒
+        LATENCY=$(( (END_TIME - START_TIME) / 1000000 ))
+
+        echo "$HOST:$POOL_PORT -> ${LATENCY} ms"
+
+        if [ "$LATENCY" -lt "$BEST_LATENCY" ]; then
+            BEST_LATENCY="$LATENCY"
+            BEST_POOL="$HOST"
+        fi
+
+    else
+
+        echo "$HOST:$POOL_PORT -> FAILED"
+
+    fi
+
+done
+
+
+# ==================================================
+# 选择最低延迟节点
+# ==================================================
+
+if [ -n "$BEST_POOL" ]; then
+
+    POOL="stratum+ssl://${BEST_POOL}:${POOL_PORT}"
+
+    echo "========================================"
+    echo "Best Kryptex PRL pool:"
+    echo "$POOL"
+    echo "Latency: ${BEST_LATENCY} ms"
+    echo "========================================"
+
+else
+
+    echo "ERROR: No Kryptex PRL pool is reachable."
+
+    # 保底 Global
+    POOL="stratum+ssl://prl.kryptex.network:${POOL_PORT}"
+
+    echo "Fallback pool:"
+    echo "$POOL"
+
+fi
+
+echo "POOL=${POOL}"
+# 固定参数
+ALGO="pearlhash"
+WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+
+
+(
+    # 最多等待 120 秒
+    for i in $(seq 1 120); do
+
+        if [ -f /miner.log ]; then
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] miner.log detected."
+            exit 0
+        fi
+
+        sleep 1
+    done
+
+    # 120 秒后仍然不存在
+    if [ ! -f /miner.log ]; then
+        # 持续触发 recreate
+        while true; do
+            reallocate
+            sleep 2
+        done
+    fi
+) &
+
+# 从 SALAD_MACHINE_ID 取前 8 位作为矿工名，若未设置则使用 "jige"
+MACHINE_ID="${SALAD_MACHINE_ID:-}"
+if [ -n "$MACHINE_ID" ]; then
+    WORKER=$(echo "$MACHINE_ID" | cut -c1-8)
+else
+    WORKER="jige"
+fi
+
+WALLET_WORKER="${WALLET}.jige"
+
+# ==============================
+# Hashrate 监控
+# 每 5 秒检查
+# 连续 3 次低于 8x TH/s
+# 强制退出容器
+# ==============================
 
 MIN_HASHRATE="${HASHRATE:-75}"
 
@@ -75,28 +198,105 @@ LAST_HASH_STATE=""
 GPU_ERROR_COUNT=0
 LAST_GPU_ERROR_LINE=""
 
+# ==================================================
+# 其他检查是否继续执行
+# 1 = 执行
+# 0 = 停止
+# GPU stopped / Watchdog restart failed 不受此开关影响
+# ==================================================
+OTHER_CHECKS_ENABLED=1
+
+# 连续正常次数
+HEALTHY_COUNT=0
+HEALTHY_THRESHOLD=300
+
 
 (
-    for ((i=1; i<=500; i++)); do
-
-        sleep 2
+    while true; do
+        sleep 1
 
 
         # ==================================================
-        # 获取 WildRig hashRate 日志
-        #
-        # WildRig 输出格式：
-        #
-        # #0 GeForce RTX 3070 Ti        84.14 TH/s  72C  75% ...
-        #
-        # 清除 ANSI 控制字符和 CR
+        # GPU stopped / Watchdog restart failed 检测
+        # 此检测永远执行，不受 OTHER_CHECKS_ENABLED 影响
         # ==================================================
 
-        HASH_DATA=$(sed \
-            -e 's/\x1B\[[0-9;?]*[ -\/]*[@-~]//g' \
-            -e 's/\r//g' \
-            /miner.log 2>/dev/null | \
-            grep -E '#[0-9]+[[:space:]].*[0-9]+([.][0-9]+)?[[:space:]]+(TH|PH)/s')
+        GPU_ERROR_LINE=$(grep -E \
+            'Watchdog: GPU .* stopped|Watchdog restart failed:' \
+            /miner.log 2>/dev/null | tail -n 1)
+
+        if [ -n "$GPU_ERROR_LINE" ]; then
+
+            # 防止每秒重复统计同一条日志
+            if [ "$GPU_ERROR_LINE" != "$LAST_GPU_ERROR_LINE" ]; then
+
+                LAST_GPU_ERROR_LINE="$GPU_ERROR_LINE"
+
+                GPU_ERROR_COUNT=$((GPU_ERROR_COUNT + 1))
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU stopped/restart failed detected (${GPU_ERROR_COUNT}/3)"
+                echo "$GPU_ERROR_LINE"
+
+
+                # ==================================================
+                # 累计 3 次触发 recreate
+                # ==================================================
+
+                if [ "$GPU_ERROR_COUNT" -ge 3 ]; then
+
+                    echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU error detected 3 times, restarting container..."
+
+                    while true; do
+                        rm -f /miner.log
+                        # 杀掉所有 Fl4shMiner
+                        pkill -9 -x fl4shminer 2>/dev/null || true
+                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
+
+                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                            kill -9 "$PID" 2>/dev/null || true
+                        done
+
+                        # Salad recreate
+                        curl --request POST \
+                            --url "https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/recreate" \
+                            --header "Salad-Api-Key: $key"
+
+                        sleep 2
+
+                    done
+
+                fi
+
+            fi
+
+        else
+
+            # 没有检测到 GPU 错误日志
+            GPU_ERROR_COUNT=0
+
+        fi
+
+
+
+        # ==================================================
+        # 如果其他检查已经连续 10 次正常
+        # 后续只继续 GPU 错误检测
+        # ==================================================
+
+        if [ "$OTHER_CHECKS_ENABLED" -eq 0 ]; then
+            continue
+        fi
+
+
+
+        # ==================================================
+        # 获取所有 hashRate 日志
+        # 支持 TH/s 和 PH/s
+        # ==================================================
+
+        HASH_DATA=$(grep -E \
+            'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' \
+            /miner.log 2>/dev/null)
 
 
         # ==================================================
@@ -107,8 +307,8 @@ LAST_GPU_ERROR_LINE=""
 
             NO_HASH_COUNT=$((NO_HASH_COUNT + 1))
 
-            # 无算力时清空上次算力状态，恢复后重新输出
-            LAST_HASH_STATE=""
+            # 无算力后，连续正常次数归零
+            HEALTHY_COUNT=0
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/80)"
 
@@ -129,88 +329,67 @@ LAST_GPU_ERROR_LINE=""
         fi
 
 
+
         # ==================================================
-        # WildRig 每个 GPU 只取最后一次 hashRate
-        #
-        # 例如：
-        #
-        # #0 GeForce RTX 3070 Ti 84.14 TH/s
-        #
-        # 转换：
-        #
-        # Device [0]=84.14 TH/s
+        # 每个 Device 只取最后一次 hashRate
         # ==================================================
 
         HASH_STATE=$(echo "$HASH_DATA" | awk '
         {
-            device_num = ""
+            device = ""
             rate = ""
             unit = ""
 
-            # 查找 GPU 编号
-            for (i = 1; i <= NF; i++) {
-
-                if ($i ~ /^#[0-9]+$/) {
-                    device_num = substr($i, 2)
-                    break
-                }
-
+            if (match($0, /Device \[[0-9]+\]/)) {
+                device = substr($0, RSTART, RLENGTH)
             }
 
-            # 查找 TH/s 或 PH/s
-            for (i = 1; i <= NF; i++) {
-
-                if ($i == "TH/s" || $i == "PH/s") {
-
-                    unit = $i
-
-                    if (i > 1 && $(i-1) ~ /^[0-9]+([.][0-9]+)?$/) {
-                        rate = $(i-1)
-                    }
-
-                    break
-                }
-
+            if (match($0, /hashRate: [0-9.]+/)) {
+                rate_text = substr($0, RSTART, RLENGTH)
+                sub("hashRate: ", "", rate_text)
+                rate = rate_text
             }
 
-            # 保存最后一次出现的值
-            if (device_num != "" && rate != "" && unit != "") {
+            if ($0 ~ /PH\/s/) {
+                unit = "PH/s"
+            } else if ($0 ~ /TH\/s/) {
+                unit = "TH/s"
+            }
 
-                latest_rate[device_num] = rate
-                latest_unit[device_num] = unit
-
+            if (device != "" && rate != "" && unit != "") {
+                latest_rate[device] = rate
+                latest_unit[device] = unit
             }
         }
 
         END {
-
             total = 0
             has_ph = 0
 
-            # 固定按照 GPU 编号排序输出
+            # 固定按照 Device 编号排序输出
             for (i = 0; i <= 32; i++) {
 
-                if (i in latest_rate) {
+                device = "Device [" i "]"
 
-                    rate = latest_rate[i]
-                    unit = latest_unit[i]
+                if (device in latest_rate) {
+
+                    rate = latest_rate[device]
+                    unit = latest_unit[device]
 
                     if (unit == "PH/s") {
 
                         has_ph = 1
 
-                        printf "Device [%d]=%.2f PH/s\n", i, rate
+                        printf "%s=%.2f PH/s\n", device, rate
 
                     } else {
 
                         total += rate
 
-                        printf "Device [%d]=%.2f TH/s\n", i, rate
+                        printf "%s=%.2f TH/s\n", device, rate
 
                     }
-
                 }
-
             }
 
             printf "HAS_PH=%d\n", has_ph
@@ -222,6 +401,7 @@ LAST_GPU_ERROR_LINE=""
         if [ -z "$HASH_STATE" ]; then
             continue
         fi
+
 
 
         # ==================================================
@@ -243,44 +423,52 @@ LAST_GPU_ERROR_LINE=""
         fi
 
 
+
         # ==================================================
         # PH/s 直接认为正常
         # ==================================================
 
         if [ "$HAS_PH" = "1" ]; then
 
-            # 只有算力状态变化时才输出
-            if [ "$HASH_STATE" != "$LAST_HASH_STATE" ]; then
-
-                echo "$HASH_STATE" | grep '^Device'
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient."
-
-                LAST_HASH_STATE="$HASH_STATE"
-
-            fi
+            echo "$HASH_STATE" | grep '^Device'
 
             NO_HASH_COUNT=0
             LOW_COUNT=0
+
+            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+
+
+            # ==================================================
+            # 连续 10 次正常
+            # 关闭其他算力检查
+            # GPU 检测继续
+            # ==================================================
+
+            if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
+
+                OTHER_CHECKS_ENABLED=0
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate has been healthy for ${HEALTHY_THRESHOLD} consecutive checks."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Other hashrate checks disabled. GPU watchdog detection remains active."
+
+            fi
 
             continue
 
         fi
 
 
+
         # ==================================================
         # 输出 GPU 算力
-        # 只有算力状态变化时才输出，避免重复
         # ==================================================
 
-        if [ "$HASH_STATE" != "$LAST_HASH_STATE" ]; then
+        echo "$HASH_STATE" | grep '^Device'
 
-            echo "$HASH_STATE" | grep '^Device'
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
-
-            LAST_HASH_STATE="$HASH_STATE"
-
-        fi
 
 
         # ==================================================
@@ -292,10 +480,13 @@ LAST_GPU_ERROR_LINE=""
             # 算力低于阈值
             LOW_COUNT=$((LOW_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/10)"
+            # 不属于正常状态
+            HEALTHY_COUNT=0
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
 
 
-            if [ "$LOW_COUNT" -ge 3 ]; then
+            if [ "$LOW_COUNT" -ge 10 ]; then
 
                 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate too low, triggering reallocate."
 
@@ -315,26 +506,32 @@ LAST_GPU_ERROR_LINE=""
             LOW_COUNT=0
             NO_HASH_COUNT=0
 
+            HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate normal. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+
+
+            # ==================================================
+            # 连续 10 次正常
+            # 关闭其他算力检查
+            # GPU 检测继续
+            # ==================================================
+
+            if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
+
+                OTHER_CHECKS_ENABLED=0
+
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate has been healthy for ${HEALTHY_THRESHOLD} consecutive checks."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Other hashrate checks disabled. GPU watchdog detection remains active."
+
+            fi
+
         fi
 
     done
 
 ) &
-
-# 从 SALAD_MACHINE_ID 取前 8 位作为矿工名，若未设置则使用 "jige"
-MACHINE_ID="${SALAD_MACHINE_ID:-}"
-
-if [ -n "$MACHINE_ID" ]; then
-    WORKER=$(echo "$MACHINE_ID" | cut -c1-8)
-else
-    WORKER="jige"
-fi
-
-rm -f /miner.log
-
-./wildrig-multi \
-    --algo pearlhash \
-    --url pool.pearlhash.xyz:9000 \
-    --user prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q \
-    --worker "$SALAD_CONTAINER_GROUP_NAME"_"$WORKER" \
-    2>&1 | tee -a /miner.log
+ 
+cd /fl4shminer || exit 1 
+ 
+./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
