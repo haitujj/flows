@@ -247,7 +247,6 @@ HEALTHY_THRESHOLD=300
                     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU error detected 3 times, restarting container..."
 
                     while true; do
-                        rm -f /miner.log
                         # 杀掉所有 Fl4shMiner
                         pkill -9 -x fl4shminer 2>/dev/null || true
                         pkill -9 -f 'fl4shminer' 2>/dev/null || true
@@ -531,7 +530,8 @@ HEALTHY_THRESHOLD=300
     done
 
 ) &
- 
+
+rm -f /miner.log
 cd /fl4shminer || exit 1 
  
 ./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
