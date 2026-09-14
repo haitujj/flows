@@ -77,7 +77,7 @@ fi
 echo "POOL=${POOL}"
 # 固定参数
 ALGO="pearlhash"
-WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+WALLET="prl1pxqqpx28r0kag2r9kh3dv083f6a2lmzwtfstmna2zveq8zlmxm5cqxt0wcm"
 
 # 从 SALAD_MACHINE_ID 取前 8 位作为矿工名，若未设置则使用 "jige"
 MACHINE_ID="${SALAD_MACHINE_ID:-}"
