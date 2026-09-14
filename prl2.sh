@@ -90,6 +90,6 @@ fi
 WALLET_WORKER="${WALLET}/${JNAME:-jige_clore}"
 
 rm -f /miner.log
-cd /peakminer || exit 1 
-
-./peakminer --coin pearl -o "$POOL" -u "$WALLET_WORKER" 2>&1 | tee -a /miner.log
+cd /fl4shminer || exit 1 
+ 
+./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
