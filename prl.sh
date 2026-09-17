@@ -208,12 +208,12 @@ OTHER_CHECKS_ENABLED=1
 
 # 连续正常次数
 HEALTHY_COUNT=0
-HEALTHY_THRESHOLD=300
+HEALTHY_THRESHOLD=999999999
 
 
 (
     while true; do
-        sleep 1
+        sleep 2
 
 
         # ==================================================
