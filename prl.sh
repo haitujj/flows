@@ -189,7 +189,7 @@ WALLET_WORKER="${WALLET}.${JNAME:-jige}"
 # 强制退出容器
 # ==============================
 
-MIN_HASHRATE="${HASHRATE:-75}"
+MIN_HASHRATE="${HASHRATE:-79}"
 
 NO_HASH_COUNT=0
 LOW_COUNT=0
