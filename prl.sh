@@ -309,12 +309,12 @@ HEALTHY_THRESHOLD=999999999
             # 无算力后，连续正常次数归零
             HEALTHY_COUNT=0
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/80)"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected (${NO_HASH_COUNT}/40)"
 
 
-            if [ "$NO_HASH_COUNT" -ge 80 ]; then
+            if [ "$NO_HASH_COUNT" -ge 40 ]; then
 
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 80 seconds."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
 
                 while true; do
                     reallocate
