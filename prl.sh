@@ -222,7 +222,7 @@ HEALTHY_THRESHOLD=999999999
         # ==================================================
 
         GPU_ERROR_LINE=$(grep -E \
-            'Watchdog: GPU .* stopped|Watchdog restart failed:' \
+            'Watchdog: GPU .* retrying in 10s|stopped|Watchdog restart failed:' \
             /miner.log 2>/dev/null | tail -n 1)
 
         if [ -n "$GPU_ERROR_LINE" ]; then
