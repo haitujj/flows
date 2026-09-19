@@ -39,7 +39,7 @@ if [ -n "$GPU_COUNTS" ] && [ "$GPU_COUNT" -lt 2 ]; then
 
 fi
 
-if [ "$GPU_COUNT" -eq 1 ]; then
+if if [ -z "$GPU" ] && [ "$GPU_COUNT" -eq 1 ]; then
 
     GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -n 1 | xargs)
 
