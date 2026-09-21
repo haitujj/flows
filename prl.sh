@@ -212,7 +212,7 @@ HEALTHY_THRESHOLD=999999999
 
 (
     while true; do
-        sleep 2
+        sleep 4
 
 
         # ==================================================
