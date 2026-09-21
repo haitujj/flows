@@ -211,6 +211,7 @@ HEALTHY_THRESHOLD=999999999
 
 
 (
+ LAST_HASH_STATE=""
     while true; do
         sleep 4
 
@@ -391,7 +392,12 @@ HEALTHY_THRESHOLD=999999999
             continue
         fi
 
-
+        if [ "$HASH_STATE" != "$LAST_HASH_STATE" ]; then
+            SHOULD_PRINT=1
+            LAST_HASH_STATE="$HASH_STATE"
+        else
+            SHOULD_PRINT=0
+        fi
 
         # ==================================================
         # 获取是否存在 PH/s
@@ -419,14 +425,18 @@ HEALTHY_THRESHOLD=999999999
 
         if [ "$HAS_PH" = "1" ]; then
 
-            echo "$HASH_STATE" | grep '^Device'
+            if [ "$SHOULD_PRINT" -eq 1 ]; then
+                echo "$HASH_STATE" | grep '^Device'
+            fi
 
             NO_HASH_COUNT=0
             LOW_COUNT=0
 
             HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+            if [ "$SHOULD_PRINT" -eq 1 ]; then
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+            fi
 
 
             # ==================================================
@@ -454,9 +464,10 @@ HEALTHY_THRESHOLD=999999999
         # 输出 GPU 算力
         # ==================================================
 
-        echo "$HASH_STATE" | grep '^Device'
-
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
+        if [ "$SHOULD_PRINT" -eq 1 ]; then
+            echo "$HASH_STATE" | grep '^Device'
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
+        fi
 
 
 
@@ -497,7 +508,9 @@ HEALTHY_THRESHOLD=999999999
 
             HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate normal. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+            if [ "$SHOULD_PRINT" -eq 1 ]; then
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate normal. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+            fi
 
 
             # ==================================================
