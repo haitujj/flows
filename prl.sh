@@ -293,7 +293,7 @@ HEALTHY_THRESHOLD=999999999
         # ==================================================
 
         HASH_DATA=$(grep -E \
-            'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' \
+            '^[[:space:]]*[0-9]+[[:space:]]+.*[0-9.]+[[:space:]]+(TH|PH)/s' \
             /miner.log 2>/dev/null)
 
 
@@ -335,23 +335,23 @@ HEALTHY_THRESHOLD=999999999
         HASH_STATE=$(echo "$HASH_DATA" | awk '
         {
             device = ""
+            device_num = ""
             rate = ""
             unit = ""
 
-            if (match($0, /Device \[[0-9]+\]/)) {
-                device = substr($0, RSTART, RLENGTH)
+            # 匹配 GPU 表格行开头的编号，例如：  0  RTX 3070 Ti ...
+            if (match($0, /^[[:space:]]*[0-9]+/)) {
+                device_num = substr($0, RSTART, RLENGTH)
+                gsub(/[[:space:]]/, "", device_num)
+                device = "Device [" device_num "]"
             }
 
-            if (match($0, /hashRate: [0-9.]+/)) {
+            # 匹配 Hashrate 列，例如：88.3 TH/s 或 1.23 PH/s
+            if (match($0, /[0-9.]+[[:space:]]+(TH|PH)\/s/)) {
                 rate_text = substr($0, RSTART, RLENGTH)
-                sub("hashRate: ", "", rate_text)
-                rate = rate_text
-            }
-
-            if ($0 ~ /PH\/s/) {
-                unit = "PH/s"
-            } else if ($0 ~ /TH\/s/) {
-                unit = "TH/s"
+                split(rate_text, parts, /[[:space:]]+/)
+                rate = parts[1]
+                unit = parts[2]
             }
 
             if (device != "" && rate != "" && unit != "") {
@@ -364,28 +364,19 @@ HEALTHY_THRESHOLD=999999999
             total = 0
             has_ph = 0
 
-            # 固定按照 Device 编号排序输出
             for (i = 0; i <= 32; i++) {
-
                 device = "Device [" i "]"
 
                 if (device in latest_rate) {
-
                     rate = latest_rate[device]
                     unit = latest_unit[device]
 
                     if (unit == "PH/s") {
-
                         has_ph = 1
-
                         printf "%s=%.2f PH/s\n", device, rate
-
                     } else {
-
                         total += rate
-
                         printf "%s=%.2f TH/s\n", device, rate
-
                     }
                 }
             }
