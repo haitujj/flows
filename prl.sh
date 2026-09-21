@@ -7,11 +7,11 @@ reallocate() {
       --url https://api.salad.com/api/public/organizations/$SALAD_ORGANIZATION_NAME/projects/$SALAD_PROJECT_NAME/containers/$SALAD_CONTAINER_GROUP_NAME/instances/$SALAD_INSTANCE_ID/reallocate \
       --header "Salad-Api-Key: $key"
       
-    # 杀掉所有 Fl4shMiner
-    pkill -9 -x fl4shminer 2>/dev/null || true
-    pkill -9 -f 'fl4shminer' 2>/dev/null || true
+    # 杀掉所有 peakminer
+    pkill -9 -x peakminer 2>/dev/null || true
+    pkill -9 -f 'peakminer' 2>/dev/null || true
     
-    for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+    for PID in $(pgrep -f 'peakminer' 2>/dev/null); do
         kill -9 "$PID" 2>/dev/null || true
     done
     
@@ -146,7 +146,6 @@ fi
 
 echo "POOL=${POOL}"
 # 固定参数
-ALGO="pearlhash"
 WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
 
 
@@ -247,11 +246,11 @@ HEALTHY_THRESHOLD=999999999
                     echo "[$(date '+%Y-%m-%d %H:%M:%S')] GPU error detected 3 times, restarting container..."
 
                     while true; do
-                        # 杀掉所有 Fl4shMiner
-                        pkill -9 -x fl4shminer 2>/dev/null || true
-                        pkill -9 -f 'fl4shminer' 2>/dev/null || true
+                        # 杀掉所有 peakminer
+                        pkill -9 -x peakminer 2>/dev/null || true
+                        pkill -9 -f 'peakminer' 2>/dev/null || true
 
-                        for PID in $(pgrep -f 'fl4shminer' 2>/dev/null); do
+                        for PID in $(pgrep -f 'peakminer' 2>/dev/null); do
                             kill -9 "$PID" 2>/dev/null || true
                         done
 
@@ -532,6 +531,6 @@ HEALTHY_THRESHOLD=999999999
 ) &
 
 rm -f /miner.log
-cd /fl4shminer || exit 1 
+cd /peakminer || exit 1 
  
-./fl4shminer -a "$ALGO" -pool "$POOL" -w "$WALLET_WORKER" -pass x 2>&1 | tee -a /miner.log
+./peakminer --coin pearl -o "$POOL" -u "$WALLET_WORKER" 2>&1 | tee -a /miner.log
