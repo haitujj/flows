@@ -206,7 +206,7 @@ HEALTHY_COUNT=0
     LAST_HASH_STATE=""
 
     while true; do
-        sleep 2
+        sleep 5
 
         # ==================================================
         # 获取所有 hashRate 日志
