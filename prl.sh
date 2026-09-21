@@ -179,7 +179,7 @@ else
     WORKER="jige"
 fi
 
-WALLET_WORKER="${WALLET}.${JNAME:-jige}"
+WALLET_WORKER="${WALLET}/${JNAME:-jige}"
 
 # ==============================
 # Hashrate 监控
