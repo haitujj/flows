@@ -197,14 +197,6 @@ LAST_HASH_STATE=""
 GPU_ERROR_COUNT=0
 LAST_GPU_ERROR_LINE=""
 
-# ==================================================
-# 其他检查是否继续执行
-# 1 = 执行
-# 0 = 停止
-# GPU stopped / Watchdog restart failed 不受此开关影响
-# ==================================================
-OTHER_CHECKS_ENABLED=1
-
 # 连续正常次数
 HEALTHY_COUNT=0
 
