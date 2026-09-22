@@ -70,17 +70,24 @@ fi
 # Kryptex PRL 自动选择最低延迟矿池
 # ==================================================
 
-POOL_PORT=8048
+POOL_PORT=1200
 
 POOLS=(
-    "prl.kryptex.network"
-    "prl-eu.kryptex.network"
-    "prl-us.kryptex.network"
-    "prl-br.kryptex.network"
-    "prl-sg.kryptex.network"
-    "prl-hk.kryptex.network"
-    "prl-ru.kryptex.network"
-    "prl-ae.kryptex.network"
+    "de.pearl.herominers.com"
+    "fr.pearl.herominers.com"
+    "es.pearl.herominers.com"
+    "fi.pearl.herominers.com"
+    "ru.pearl.herominers.com"
+    "ca.pearl.herominers.com"
+    "us.pearl.herominers.com"
+    "us2.pearl.herominers.com"
+    "us3.pearl.herominers.com"
+    "br.pearl.herominers.com"
+    "hk.pearl.herominers.com"
+    "kr.pearl.herominers.com"
+    "sg.pearl.herominers.com"
+    "tr.pearl.herominers.com"
+    "au.pearl.herominers.com"
 )
 
 BEST_POOL=""
@@ -124,7 +131,8 @@ done
 
 if [ -n "$BEST_POOL" ]; then
 
-    POOL="stratum+ssl://${BEST_POOL}:${POOL_PORT}"
+    #POOL="stratum+ssl://${BEST_POOL}:${POOL_PORT}"
+    POOL="${BEST_POOL}:${POOL_PORT}"
 
     echo "========================================"
     echo "Best Kryptex PRL pool:"
@@ -137,8 +145,8 @@ else
     echo "ERROR: No Kryptex PRL pool is reachable."
 
     # 保底 Global
-    POOL="stratum+ssl://prl.kryptex.network:${POOL_PORT}"
-
+    #POOL="stratum+ssl://prl.kryptex.network:${POOL_PORT}"
+    POOL="us.pearl.herominers.com:${POOL_PORT}"
     echo "Fallback pool:"
     echo "$POOL"
 
