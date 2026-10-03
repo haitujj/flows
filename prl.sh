@@ -70,17 +70,18 @@ fi
 # Kryptex PRL 自动选择最低延迟矿池
 # ==================================================
 
-POOL_PORT=8048
+# 日志显示矿工实际连接 8049 端口
+POOL_PORT=8049
 
 POOLS=(
-    "prl.kryptex.network"
-    "prl-eu.kryptex.network"
-    "prl-us.kryptex.network"
-    "prl-br.kryptex.network"
-    "prl-sg.kryptex.network"
-    "prl-hk.kryptex.network"
-    "prl-ru.kryptex.network"
-    "prl-ae.kryptex.network"
+    "qtc.kryptex.network"
+    "qtc-eu.kryptex.network"
+    "qtc-us.kryptex.network"
+    "qtc-br.kryptex.network"
+    "qtc-sg.kryptex.network"
+    "qtc-hk.kryptex.network"
+    "qtc-ru.kryptex.network"
+    "qtc-ae.kryptex.network"
 )
 
 BEST_POOL=""
@@ -137,7 +138,7 @@ else
     echo "ERROR: No Kryptex PRL pool is reachable."
 
     # 保底 Global
-    POOL="stratum+ssl://prl.kryptex.network:${POOL_PORT}"
+    POOL="stratum+ssl://qtc.kryptex.network:${POOL_PORT}"
 
     echo "Fallback pool:"
     echo "$POOL"
@@ -146,8 +147,8 @@ fi
 
 echo "POOL=${POOL}"
 # 固定参数
-ALGO="pearlhash"
-WALLET="prl1pe2ae2q2j4nnhhx39z6548td6j765wsdy8n6mx0axpxmcqh6ef33sj32q4q"
+ALGO="quantus"
+WALLET="qzodHryFjHjiy4w5TsXUzxPpVnHmwcgrCXB41DnmD2S1tz5Mr"
 
 
 (
@@ -184,12 +185,12 @@ WALLET_WORKER="${WALLET}.${JNAME:-jige}"
 
 # ==============================
 # Hashrate 监控
-# 每 5 秒检查
-# 连续 3 次低于 8x TH/s
-# 强制退出容器
+# 每 2 秒检查一次
+# 连续多次低于阈值 → 强制退出容器
 # ==============================
 
-MIN_HASHRATE="${HASHRATE:-76}"
+# 单位：MH/s（可通过 HASHRATE 覆盖）
+MIN_HASHRATE="${HASHRATE:-310}"
 
 NO_HASH_COUNT=0
 LOW_COUNT=0
@@ -278,7 +279,7 @@ HEALTHY_THRESHOLD=999999999
 
 
         # ==================================================
-        # 如果其他检查已经连续 10 次正常
+        # 如果其他检查已经关闭
         # 后续只继续 GPU 错误检测
         # ==================================================
 
@@ -290,11 +291,11 @@ HEALTHY_THRESHOLD=999999999
 
         # ==================================================
         # 获取所有 hashRate 日志
-        # 支持 TH/s 和 PH/s
+        # 支持 MH/s、TH/s 和 PH/s
         # ==================================================
 
         HASH_DATA=$(grep -E \
-            'Device \[[0-9]+\] hashRate: [0-9.]+ (TH|PH)/s' \
+            'Device \[[0-9]+\] hashRate: [0-9.]+ (MH|TH|PH)/s' \
             /miner.log 2>/dev/null)
 
 
@@ -314,7 +315,7 @@ HEALTHY_THRESHOLD=999999999
 
             if [ "$NO_HASH_COUNT" -ge 40 ]; then
 
-                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 40 seconds."
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] No hashrate detected for 80 seconds."
 
                 while true; do
                     reallocate
@@ -331,13 +332,14 @@ HEALTHY_THRESHOLD=999999999
 
         # ==================================================
         # 每个 Device 只取最后一次 hashRate
+        # 全部换算为 MH/s 做汇总
         # ==================================================
 
         HASH_STATE=$(echo "$HASH_DATA" | awk '
         {
             device = ""
             rate = ""
-            unit = ""
+            mult = 0
 
             if (match($0, /Device \[[0-9]+\]/)) {
                 device = substr($0, RSTART, RLENGTH)
@@ -350,22 +352,23 @@ HEALTHY_THRESHOLD=999999999
             }
 
             if ($0 ~ /PH\/s/) {
-                unit = "PH/s"
+                mult = 1000000000
             } else if ($0 ~ /TH\/s/) {
-                unit = "TH/s"
+                mult = 1000000
+            } else if ($0 ~ /MH\/s/) {
+                mult = 1
             }
 
-            if (device != "" && rate != "" && unit != "") {
+            if (device != "" && rate != "" && mult > 0) {
                 latest_rate[device] = rate
-                latest_unit[device] = unit
+                latest_mult[device] = mult
             }
         }
 
         END {
-            total = 0
-            has_ph = 0
+            total_mh = 0
+            has_high = 0
 
-            # 固定按照 Device 编号排序输出
             for (i = 0; i <= 32; i++) {
 
                 device = "Device [" i "]"
@@ -373,26 +376,26 @@ HEALTHY_THRESHOLD=999999999
                 if (device in latest_rate) {
 
                     rate = latest_rate[device]
-                    unit = latest_unit[device]
+                    mult = latest_mult[device]
 
-                    if (unit == "PH/s") {
-
-                        has_ph = 1
-
-                        printf "%s=%.2f PH/s\n", device, rate
-
-                    } else {
-
-                        total += rate
-
-                        printf "%s=%.2f TH/s\n", device, rate
-
+                    if (mult > 1) {
+                        has_high = 1
                     }
+
+                    if (mult == 1000000000) {
+                        printf "%s=%.2f PH/s\n", device, rate
+                    } else if (mult == 1000000) {
+                        printf "%s=%.2f TH/s\n", device, rate
+                    } else {
+                        printf "%s=%.2f MH/s\n", device, rate
+                    }
+
+                    total_mh += rate * mult
                 }
             }
 
-            printf "HAS_PH=%d\n", has_ph
-            printf "TOTAL=%.2f\n", total
+            printf "HAS_HIGH=%d\n", has_high
+            printf "TOTAL_MH=%.2f\n", total_mh
         }
         ')
 
@@ -404,30 +407,30 @@ HEALTHY_THRESHOLD=999999999
 
 
         # ==================================================
-        # 获取是否存在 PH/s
+        # 获取是否存在高单位（TH/s / PH/s）
         # ==================================================
 
-        HAS_PH=$(echo "$HASH_STATE" | awk -F= '$1=="HAS_PH" {print $2}')
+        HAS_HIGH=$(echo "$HASH_STATE" | awk -F= '$1=="HAS_HIGH" {print $2}')
 
 
         # ==================================================
-        # 获取总 TH/s
+        # 获取总 MH/s
         # ==================================================
 
-        TOTAL_HASHRATE=$(echo "$HASH_STATE" | awk -F= '$1=="TOTAL" {print $2}')
+        TOTAL_HASHRATE_MH=$(echo "$HASH_STATE" | awk -F= '$1=="TOTAL_MH" {print $2}')
 
 
-        if [ -z "$TOTAL_HASHRATE" ]; then
+        if [ -z "$TOTAL_HASHRATE_MH" ]; then
             continue
         fi
 
 
 
         # ==================================================
-        # PH/s 直接认为正常
+        # TH/s / PH/s 直接认为正常
         # ==================================================
 
-        if [ "$HAS_PH" = "1" ]; then
+        if [ "$HAS_HIGH" = "1" ]; then
 
             echo "$HASH_STATE" | grep '^Device'
 
@@ -436,14 +439,8 @@ HEALTHY_THRESHOLD=999999999
 
             HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] TH/s or PH/s detected, hashrate is sufficient. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
 
-
-            # ==================================================
-            # 连续 10 次正常
-            # 关闭其他算力检查
-            # GPU 检测继续
-            # ==================================================
 
             if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
 
@@ -466,7 +463,7 @@ HEALTHY_THRESHOLD=999999999
 
         echo "$HASH_STATE" | grep '^Device'
 
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE} TH/s"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Total Hashrate: ${TOTAL_HASHRATE_MH} MH/s (threshold ${MIN_HASHRATE} MH/s)"
 
 
 
@@ -474,7 +471,7 @@ HEALTHY_THRESHOLD=999999999
         # 判断总算力
         # ==================================================
 
-        if awk "BEGIN {exit !($TOTAL_HASHRATE < $MIN_HASHRATE)}"; then
+        if awk "BEGIN {exit !($TOTAL_HASHRATE_MH < $MIN_HASHRATE)}"; then
 
             # 算力低于阈值
             LOW_COUNT=$((LOW_COUNT + 1))
@@ -482,7 +479,7 @@ HEALTHY_THRESHOLD=999999999
             # 不属于正常状态
             HEALTHY_COUNT=0
 
-            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE} TH/s < ${MIN_HASHRATE} TH/s (${LOW_COUNT}/3)"
+            echo "[$(date '+%Y-%m-%d %H:%M:%S')] WARNING: Total hashrate ${TOTAL_HASHRATE_MH} MH/s < ${MIN_HASHRATE} MH/s (${LOW_COUNT}/10)"
 
 
             if [ "$LOW_COUNT" -ge 10 ]; then
@@ -509,12 +506,6 @@ HEALTHY_THRESHOLD=999999999
 
             echo "[$(date '+%Y-%m-%d %H:%M:%S')] Hashrate normal. Healthy: ${HEALTHY_COUNT}/${HEALTHY_THRESHOLD}"
 
-
-            # ==================================================
-            # 连续 10 次正常
-            # 关闭其他算力检查
-            # GPU 检测继续
-            # ==================================================
 
             if [ "$HEALTHY_COUNT" -ge "$HEALTHY_THRESHOLD" ]; then
 
