@@ -291,11 +291,11 @@ HEALTHY_THRESHOLD=999999999
 
         # ==================================================
         # 获取所有 hashRate 日志
-        # 支持 MH/s、TH/s 和 PH/s
+        # 支持 MH/s、GH/s、TH/s 和 PH/s
         # ==================================================
 
         HASH_DATA=$(grep -E \
-            'Device \[[0-9]+\] hashRate: [0-9.]+ (MH|TH|PH)/s' \
+            'Device \[[0-9]+\] hashRate: [0-9.]+ (MH|GH|TH|PH)/s' \
             /miner.log 2>/dev/null)
 
 
@@ -355,6 +355,8 @@ HEALTHY_THRESHOLD=999999999
                 mult = 1000000000
             } else if ($0 ~ /TH\/s/) {
                 mult = 1000000
+            } else if ($0 ~ /GH\/s/) {
+                mult = 1000
             } else if ($0 ~ /MH\/s/) {
                 mult = 1
             }
@@ -378,7 +380,8 @@ HEALTHY_THRESHOLD=999999999
                     rate = latest_rate[device]
                     mult = latest_mult[device]
 
-                    if (mult > 1) {
+                    # TH/s 和 PH/s 视为高单位，直接判定算力充足
+                    if (mult >= 1000000) {
                         has_high = 1
                     }
 
@@ -386,6 +389,8 @@ HEALTHY_THRESHOLD=999999999
                         printf "%s=%.2f PH/s\n", device, rate
                     } else if (mult == 1000000) {
                         printf "%s=%.2f TH/s\n", device, rate
+                    } else if (mult == 1000) {
+                        printf "%s=%.2f GH/s\n", device, rate
                     } else {
                         printf "%s=%.2f MH/s\n", device, rate
                     }
